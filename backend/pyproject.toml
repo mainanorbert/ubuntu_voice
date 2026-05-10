@@ -1,0 +1,32 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Customer Support SaaS – FastAPI backend"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.18.4",
+    "clerk-backend-api>=5.0.6",
+    "fastapi[standard]>=0.136.0",
+    "openai>=2.32.0",
+    "email-validator>=2.2.0",
+    "pgvector>=0.3.6",
+    "psycopg2-binary>=2.9.10",
+    "pydantic-settings>=2.9.1",
+    "pypdf>=5.1.0",
+    "sqlalchemy>=2.0.41",
+    "openai-agents>=0.14.3",
+    "httpx>=0.28.1",
+    "tiktoken>=0.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "anyio>=4.13.0",
+    "pytest>=9.0.0",
+    "pytest-anyio>=0.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
