@@ -33,6 +33,11 @@ class CompanyCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, examples=["Acme Support"])
     email: EmailStr = Field(..., examples=["support@acme.example"])
     phone: str | None = Field(default=None, min_length=7, max_length=20, examples=["+254712345678"])
+    description: str | None = Field(
+        default=None,
+        max_length=300,
+        examples=["Answers questions about local peacebuilding services and referral documents."],
+    )
 
     @field_validator("phone")
     @classmethod
@@ -42,6 +47,15 @@ class CompanyCreateRequest(BaseModel):
             return None
         return normalize_phone_number(value)
 
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, value: str | None) -> str | None:
+        """Store blank descriptions as null after trimming whitespace."""
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
 
 class CompanyResponse(BaseModel):
     """Serialized company returned to API clients."""
@@ -50,6 +64,7 @@ class CompanyResponse(BaseModel):
     name: str
     email: str
     phone: str | None
+    description: str | None
     owner_id: str
     created_at: datetime
 

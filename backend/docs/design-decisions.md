@@ -39,7 +39,8 @@ flowchart TD
 - FastAPI is the backend API layer, mounted under `/api/v1`.
 - Clerk is the source of authenticated user identity. Backend routes require a valid Clerk session and mirror users locally.
 - `Company` is the tenant boundary. Documents, chunks, chat retrieval, spend, and guardrail events are scoped by company.
-- New agents require a name and email. Phone is optional for now, nullable in the database, and validated when provided.
+- New agents require a name and email. Phone and description are optional for now, nullable in the database, and validated when provided.
+- Agent descriptions are capped at 300 characters and displayed in the UI to clarify each agent's purpose before users upload documents or start a chat.
 - PostgreSQL with pgvector is the production vector store. SQLite remains supported in tests through the portable `EmbeddingVector` type.
 - The backend enables the pgvector extension during app startup when the configured database is PostgreSQL.
 - SQLAlchemy ORM models define the current schema; Alembic exists for migrations that must repair or evolve live databases.
@@ -64,7 +65,7 @@ flowchart TD
 ## Current Backend Responsibilities
 
 - Authenticate users and register local user rows.
-- Manage tenant companies with name, email, and optional phone contact details.
+- Manage tenant companies with name, email, optional phone contact details, and an optional short purpose description.
 - Accept, validate, store, list, and confirm PDF document uploads.
 - Extract PDF text, chunk it, embed it, and store vectors.
 - Serve tenant-scoped RAG chat answers.

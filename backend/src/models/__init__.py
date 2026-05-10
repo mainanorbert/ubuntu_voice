@@ -43,6 +43,7 @@ class Company(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     email: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     phone: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     owner_id: Mapped[str] = mapped_column(
         Text,
         ForeignKey("users.id", ondelete="CASCADE"),

@@ -52,12 +52,14 @@ def test_document_ingestion_persists_pending_metadata(tmp_path, monkeypatch):
                     "name": "Ingestion Test Co",
                     "email": "info@ingestion-test.example",
                     "phone": "+254712345678",
+                    "description": "Answers questions from uploaded program documents.",
                 },
             )
             assert company_response.status_code == 201, company_response.text
             company_body = company_response.json()
             company_id = company_body["id"]
             assert company_body["phone"] == "+254712345678"
+            assert company_body["description"] == "Answers questions from uploaded program documents."
 
             doc_response = client.post(
                 f"/api/v1/companies/{company_id}/documents",

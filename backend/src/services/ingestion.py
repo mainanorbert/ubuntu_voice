@@ -53,6 +53,7 @@ def get_or_create_company(
     name: str,
     email: str,
     phone: str | None,
+    description: str | None,
 ) -> tuple[Company, bool]:
     """Return the company matching the given email, creating it if it does not exist.
 
@@ -64,14 +65,22 @@ def get_or_create_company(
     if existing is not None:
         if phone and not existing.phone:
             existing.phone = phone
-            session.flush()
+        if description and not existing.description:
+            existing.description = description
+        session.flush()
         return existing, False
 
     normalized_name = name.strip()
     if not normalized_name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Company name cannot be empty.")
 
-    company = Company(name=normalized_name, email=normalized_email, phone=phone, owner_id=owner_id)
+    company = Company(
+        name=normalized_name,
+        email=normalized_email,
+        phone=phone,
+        description=description,
+        owner_id=owner_id,
+    )
     session.add(company)
     session.flush()
     return company, True

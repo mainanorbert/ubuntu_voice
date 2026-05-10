@@ -25,6 +25,26 @@ def test_company_create_request_allows_missing_phone() -> None:
     assert body.phone is None
 
 
+def test_company_create_request_trims_optional_description() -> None:
+    """Agent descriptions are optional and stored without surrounding whitespace."""
+    body = CompanyCreateRequest(
+        name="DRC Women Peacebuilders",
+        email="support@example.org",
+        description="  Supports questions about referral documents.  ",
+    )
+    assert body.description == "Supports questions about referral documents."
+
+
+def test_company_create_request_rejects_long_description() -> None:
+    """Agent descriptions are capped at 300 characters."""
+    with pytest.raises(ValidationError):
+        CompanyCreateRequest(
+            name="DRC Women Peacebuilders",
+            email="support@example.org",
+            description="x" * 301,
+        )
+
+
 def test_company_create_request_rejects_invalid_phone() -> None:
     """Invalid phone values are rejected by request validation."""
     with pytest.raises(ValidationError):

@@ -56,6 +56,7 @@ def build_company_response(company) -> CompanyResponse:
         name=company.name,
         email=company.email,
         phone=company.phone,
+        description=company.description,
         owner_id=company.owner_id,
         created_at=company.created_at,
     )
@@ -107,6 +108,7 @@ async def post_company(
         name=body.name,
         email=str(body.email),
         phone=body.phone,
+        description=body.description,
     )
     db_session.commit()
     db_session.refresh(company)
