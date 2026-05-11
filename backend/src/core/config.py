@@ -81,6 +81,21 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("SENDGRID_API_KEY"),
         description="Optional SendGrid API key used for emerging-conflict alert emails.",
     )
+    twilio_account_sid: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TWILIO_ACCOUNT_SID"),
+        description="Optional Twilio Account SID used to send WhatsApp replies.",
+    )
+    twilio_auth_token: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TWILIO_AUTH_TOKEN"),
+        description="Optional Twilio Auth Token used to send WhatsApp replies.",
+    )
+    twilio_whatsapp_number: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TWILIO_WHATSAPP_NUMBER"),
+        description="Optional Twilio WhatsApp sender, formatted like whatsapp:+15551234567.",
+    )
     rag_similarity_threshold: float = Field(
         default=0.25,
         ge=0.0,
