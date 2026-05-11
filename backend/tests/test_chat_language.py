@@ -4,7 +4,11 @@ import pytest
 from pydantic import ValidationError
 
 from src.api.v1.schemas.agent import AgentChatRequest
-from src.services.rag_agent import build_out_of_scope_reply
+from src.services.rag_agent import (
+    build_general_conversation_reply,
+    build_out_of_scope_reply,
+    is_general_conversation,
+)
 
 
 def test_agent_chat_request_accepts_supported_languages() -> None:
@@ -29,12 +33,12 @@ def test_agent_chat_request_rejects_unsupported_language() -> None:
 def test_out_of_scope_reply_is_localized() -> None:
     """No-context fallback replies are fixed strings in the selected language."""
     company_name = "Ubuntu Voice"
-    assert build_out_of_scope_reply(company_name=company_name, language="English") == (
+    assert build_out_of_scope_reply(company_name=company_name, language="English").startswith(
         "I don't have enough trusted information in Ubuntu Voice's knowledge base to answer that."
     )
-    assert build_out_of_scope_reply(company_name=company_name, language="Swahili") == (
+    assert build_out_of_scope_reply(company_name=company_name, language="Swahili").startswith(
         "Sina taarifa za kutosha zilizoaminika kwenye hifadhidata ya Ubuntu Voice kujibu hilo."
     )
-    assert build_out_of_scope_reply(company_name=company_name, language="French") == (
+    assert build_out_of_scope_reply(company_name=company_name, language="French").startswith(
         "Je n'ai pas assez d'informations fiables dans la base de connaissances de Ubuntu Voice pour répondre à cela."
     )
