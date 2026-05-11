@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   ArrowLeft,
   BrainCircuit,
-  Building2,
   CheckCircle2,
   ChevronDown,
   File,
@@ -18,8 +17,10 @@ import {
   FileUp,
   FolderOpen,
   Loader2,
+  Pencil,
   Plus,
   RefreshCw,
+  Save,
   Upload,
   X,
 } from "lucide-react"
@@ -270,11 +271,18 @@ export default function DocumentsPage() {
   const [company_description, set_company_description] = useState("")
   const [show_create_form, set_show_create_form] = useState(false)
 
+  const [editing_company_id, set_editing_company_id] = useState<string | null>(null)
+  const [edit_company_name, set_edit_company_name] = useState("")
+  const [edit_company_email, set_edit_company_email] = useState("")
+  const [edit_company_phone, set_edit_company_phone] = useState("")
+  const [edit_company_description, set_edit_company_description] = useState("")
+
   const [queued_files, set_queued_files] = useState<QueuedFile[]>([])
   const [drag_active, set_drag_active] = useState(false)
 
   const [page_loading, set_page_loading] = useState(true)
   const [creating_company, set_creating_company] = useState(false)
+  const [updating_company, set_updating_company] = useState(false)
   const [list_loading, set_list_loading] = useState(false)
   const [uploading, set_uploading] = useState(false)
   const [triggering_embed, set_triggering_embed] = useState(false)
@@ -288,7 +296,7 @@ export default function DocumentsPage() {
     const res = await fetch("/api/ingestion/companies")
     const data: unknown = await res.json().catch(() => ({}))
     if (!res.ok) { set_error(format_error_payload(data)); return }
-    if (!Array.isArray(data)) { set_error("Unexpected companies response"); return }
+    if (!Array.isArray(data)) { set_error("Unexpected agents response"); return }
     const list = data as CompanyResponse[]
     set_companies(list)
     set_selected_company_id((prev) => {
@@ -331,7 +339,7 @@ export default function DocumentsPage() {
     void load_documents(selected_company_id)
   }, [selected_company_id, load_documents])
 
-  // ── Company creation ───────────────────────────────────────────────────────
+  // ── Agent creation ─────────────────────────────────────────────────────────
 
   const create_company = useCallback(async () => {
     const name = company_name.trim()
@@ -362,6 +370,67 @@ export default function DocumentsPage() {
       set_creating_company(false)
     }
   }, [company_description, company_name, company_email, company_phone])
+
+  // ── Agent editing ──────────────────────────────────────────────────────────
+
+  const cancel_edit_company = useCallback(() => {
+    set_editing_company_id(null)
+    set_edit_company_name("")
+    set_edit_company_email("")
+    set_edit_company_phone("")
+    set_edit_company_description("")
+  }, [])
+
+  const begin_edit_company = useCallback((company: CompanyResponse) => {
+    set_editing_company_id(company.id)
+    set_edit_company_name(company.name)
+    set_edit_company_email(company.email)
+    set_edit_company_phone(company.phone ?? "")
+    set_edit_company_description(company.description ?? "")
+    set_selected_company_id(company.id)
+    set_show_create_form(false)
+    set_error(null)
+  }, [])
+
+  const update_company = useCallback(async () => {
+    if (!editing_company_id) return
+    const name = edit_company_name.trim()
+    const email = edit_company_email.trim()
+    const phone = edit_company_phone.trim()
+    const description = edit_company_description.trim()
+    if (!name || !email) return
+
+    set_updating_company(true)
+    set_error(null)
+    try {
+      const res = await fetch(`/api/ingestion/companies/${encodeURIComponent(editing_company_id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone: phone || null,
+          description: description || null,
+        }),
+      })
+      const data: unknown = await res.json().catch(() => ({}))
+      if (!res.ok) { set_error(format_error_payload(data)); return }
+      const updated = data as Partial<CompanyResponse>
+      if (!updated.id) { set_error("Unexpected response"); return }
+      set_companies((prev) => prev.map((c) => (c.id === updated.id ? (updated as CompanyResponse) : c)))
+      set_selected_company_id(updated.id)
+      cancel_edit_company()
+    } finally {
+      set_updating_company(false)
+    }
+  }, [
+    cancel_edit_company,
+    edit_company_description,
+    edit_company_email,
+    edit_company_name,
+    edit_company_phone,
+    editing_company_id,
+  ])
 
   // ── File queue management ──────────────────────────────────────────────────
 
@@ -542,6 +611,11 @@ export default function DocumentsPage() {
   const can_create_company =
     company_name.trim().length > 0 && company_email.trim().length > 0
   const description_length = company_description.length
+  const can_update_company =
+    Boolean(editing_company_id) &&
+    edit_company_name.trim().length > 0 &&
+    edit_company_email.trim().length > 0
+  const edit_description_length = edit_company_description.length
   const selected_company = companies.find((c) => c.id === selected_company_id)
 
   return (
@@ -553,7 +627,7 @@ export default function DocumentsPage() {
             <Link href="/" aria-label="Back to home"><ArrowLeft /></Link>
           </Button>
           <div className="min-w-0 flex-1">
-            <h1 className="text-sm font-semibold text-foreground">Knowledge base</h1>
+            <h1 className="text-sm font-semibold text-foreground">Agent knowledge</h1>
           </div>
           <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
             <Link href="/chat">Chat</Link>
@@ -567,17 +641,17 @@ export default function DocumentsPage() {
         {page_loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-24 text-muted-foreground">
             <Loader2 className="size-8 animate-spin text-primary" />
-            <p className="text-sm">Loading workspace…</p>
+            <p className="text-sm">Loading agents...</p>
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
 
-            {/* ── Left column: company panel ── */}
+            {/* ── Left column: agent panel ── */}
             <aside className="flex flex-col gap-4">
               <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Building2 className="size-3.5" />
+                    <BrainCircuit className="size-3.5" />
                     Agents
                   </h2>
                   <Button
@@ -591,44 +665,130 @@ export default function DocumentsPage() {
                   </Button>
                 </div>
 
-                {/* Company list */}
+                {/* Agent list */}
                 <div className="mt-3 flex flex-col gap-1">
                   {companies.length === 0 ? (
-                    <p className="py-3 text-center text-xs text-muted-foreground">No companies yet.</p>
+                    <p className="py-3 text-center text-xs text-muted-foreground">No agents yet.</p>
                   ) : (
                     companies.map((c) => (
-                      <button
+                      <div
                         key={c.id}
-                        type="button"
-                        onClick={() => set_selected_company_id(c.id)}
                         className={cn(
-                          "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                          "flex w-full items-start gap-1 rounded-lg pr-1 transition-colors",
                           c.id === selected_company_id
-                            ? "bg-primary/10 text-primary"
-                            : "text-foreground hover:bg-muted",
+                            ? "bg-primary/10"
+                            : "hover:bg-muted",
                         )}
                       >
-                        <span className="font-medium leading-tight">{c.name}</span>
-                        <span className="truncate text-xs text-muted-foreground">{c.email}</span>
-                        {c.phone ? <span className="truncate text-xs text-muted-foreground">{c.phone}</span> : null}
-                        {c.description ? (
-                          <span className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                            {c.description}
-                          </span>
-                        ) : null}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => set_selected_company_id(c.id)}
+                          className={cn(
+                            "min-w-0 flex-1 px-3 py-2 text-left text-sm",
+                            c.id === selected_company_id ? "text-primary" : "text-foreground",
+                          )}
+                        >
+                          <span className="block truncate font-medium leading-tight">{c.name}</span>
+                          <span className="block truncate text-xs text-muted-foreground">{c.email}</span>
+                          {c.phone ? <span className="block truncate text-xs text-muted-foreground">{c.phone}</span> : null}
+                          {c.description ? (
+                            <span className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                              {c.description}
+                            </span>
+                          ) : null}
+                        </button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="mt-1.5"
+                          onClick={() => begin_edit_company(c)}
+                          title={`Edit ${c.name}`}
+                        >
+                          <Pencil className="size-3" />
+                        </Button>
+                      </div>
                     ))
                   )}
                 </div>
 
-                {/* New company toggle */}
+                {editing_company_id && (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-foreground">Edit agent</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={cancel_edit_company}
+                        title="Cancel edit"
+                      >
+                        <X className="size-3" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        value={edit_company_name}
+                        onChange={(e) => set_edit_company_name(e.target.value)}
+                        placeholder="Agent name"
+                        className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
+                      />
+                      <input
+                        type="email"
+                        value={edit_company_email}
+                        onChange={(e) => set_edit_company_email(e.target.value)}
+                        placeholder="agent-contact@example.org"
+                        className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
+                      />
+                      <input
+                        type="tel"
+                        value={edit_company_phone}
+                        onChange={(e) => set_edit_company_phone(e.target.value)}
+                        placeholder="+254712345678 (optional)"
+                        className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
+                      />
+                      <div>
+                        <textarea
+                          value={edit_company_description}
+                          maxLength={300}
+                          rows={4}
+                          onChange={(e) => set_edit_company_description(e.target.value)}
+                          placeholder="Agent purpose, audience, or document focus (optional)"
+                          className="min-h-24 w-full resize-none rounded-lg border border-input bg-background px-2.5 py-2 text-sm outline-none focus-visible:border-ring"
+                        />
+                        <p className="mt-1 text-right text-[11px] text-muted-foreground">
+                          {edit_description_length}/300
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full gap-1.5"
+                        disabled={!can_update_company || updating_company}
+                        onClick={() => void update_company()}
+                      >
+                        {updating_company ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Save className="size-3.5" />
+                        )}
+                        Save changes
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* New agent toggle */}
                 <button
                   type="button"
-                  onClick={() => set_show_create_form((v) => !v)}
+                  onClick={() => {
+                    cancel_edit_company()
+                    set_show_create_form((v) => !v)
+                  }}
                   className="mt-3 flex w-full items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
                 >
                   <Plus className="size-3.5" />
-                  New company
+                  New agent
                   <ChevronDown
                     className={cn("ml-auto size-3.5 transition-transform", show_create_form && "rotate-180")}
                   />
@@ -639,14 +799,14 @@ export default function DocumentsPage() {
                     <input
                       value={company_name}
                       onChange={(e) => set_company_name(e.target.value)}
-                      placeholder="Company name"
+                      placeholder="Agent name"
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
                     />
                     <input
                       type="email"
                       value={company_email}
                       onChange={(e) => set_company_email(e.target.value)}
-                      placeholder="support@company.com"
+                      placeholder="agent-contact@example.org"
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
                     />
                     <input
@@ -676,7 +836,7 @@ export default function DocumentsPage() {
                       disabled={!can_create_company || creating_company}
                       onClick={() => void create_company()}
                     >
-                      {creating_company ? <Loader2 className="size-3.5 animate-spin" /> : "Create"}
+                      {creating_company ? <Loader2 className="size-3.5 animate-spin" /> : "Create agent"}
                     </Button>
                   </div>
                 )}
@@ -750,8 +910,8 @@ export default function DocumentsPage() {
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {selected_company_id
-                          ? "Any file type · Multiple files supported"
-                          : "Select a company on the left first"}
+                          ? "Trusted PDFs for this agent corpus"
+                          : "Select an agent on the left first"}
                       </p>
                     </div>
                   </button>
@@ -847,8 +1007,8 @@ export default function DocumentsPage() {
 
                 {!selected_company_id ? (
                   <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-muted-foreground">
-                    <Building2 className="size-8 opacity-30" />
-                    <p className="text-sm">Select a company to see its documents.</p>
+                    <BrainCircuit className="size-8 opacity-30" />
+                    <p className="text-sm">Select an agent to see its documents.</p>
                   </div>
                 ) : list_loading && documents.length === 0 ? (
                   <div className="flex justify-center py-12">
