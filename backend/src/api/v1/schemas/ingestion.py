@@ -57,6 +57,47 @@ class CompanyCreateRequest(BaseModel):
         return stripped or None
 
 
+class CompanyUpdateRequest(BaseModel):
+    """Partial payload for editing an existing agent profile."""
+
+    name: str | None = Field(default=None, min_length=1, examples=["Sahel Peace Mediator"])
+    email: EmailStr | None = Field(default=None, examples=["mediator@example.org"])
+    phone: str | None = Field(default=None, min_length=7, max_length=20, examples=["+254712345678"])
+    description: str | None = Field(
+        default=None,
+        max_length=300,
+        examples=["Supports questions about local mediation and referral documents."],
+    )
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str | None) -> str | None:
+        """Trim agent names and reject whitespace-only values."""
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Agent name cannot be empty.")
+        return stripped
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value: str | None) -> str | None:
+        """Normalize and validate agent phone numbers when provided."""
+        if value is None or not value.strip():
+            return None
+        return normalize_phone_number(value)
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, value: str | None) -> str | None:
+        """Store blank descriptions as null after trimming whitespace."""
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
 class CompanyResponse(BaseModel):
     """Serialized company returned to API clients."""
 

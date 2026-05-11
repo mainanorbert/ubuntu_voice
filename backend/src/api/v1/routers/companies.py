@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from src.api.v1.schemas.ingestion import (
     CompanyCreateRequest,
     CompanyResponse,
+    CompanyUpdateRequest,
     CompanyWithDocumentsResponse,
     DocumentConfirmRequest,
     DocumentResponse,
@@ -37,6 +38,7 @@ from src.services.ingestion import (
     list_documents,
     sanitize_file_name,
     store_uploaded_document_file,
+    update_owned_company,
     upsert_user,
 )
 from src.services.supabase_storage import (
@@ -107,6 +109,30 @@ async def post_company(
         owner_id=user.id,
         name=body.name,
         email=str(body.email),
+        phone=body.phone,
+        description=body.description,
+    )
+    db_session.commit()
+    db_session.refresh(company)
+    return build_company_response(company)
+
+
+@router.patch("/{company_id}", response_model=CompanyResponse)
+async def patch_company(
+    company_id: str,
+    body: CompanyUpdateRequest,
+    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> CompanyResponse:
+    """Update editable profile fields for an authenticated owner's agent."""
+    identity = get_authenticated_user_identity(session_state)
+    company = update_owned_company(
+        db_session,
+        company_id=company_id,
+        owner_id=identity.user_id,
+        fields_to_update=body.model_fields_set,
+        name=body.name,
+        email=str(body.email) if body.email is not None else None,
         phone=body.phone,
         description=body.description,
     )

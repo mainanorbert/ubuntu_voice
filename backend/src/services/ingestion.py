@@ -108,6 +108,55 @@ def get_owned_company(session: Session, *, company_id: str, owner_id: str) -> Co
     return company
 
 
+def update_owned_company(
+    session: Session,
+    *,
+    company_id: str,
+    owner_id: str,
+    fields_to_update: set[str],
+    name: str | None = None,
+    email: str | None = None,
+    phone: str | None = None,
+    description: str | None = None,
+) -> Company:
+    """Edit an owner's agent profile fields without changing its document corpus."""
+    company = get_owned_company(session, company_id=company_id, owner_id=owner_id)
+
+    if "name" in fields_to_update:
+        if name is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Agent name is required.")
+        existing_name = (
+            session.query(Company)
+            .filter(Company.name == name, Company.id != company.id)
+            .one_or_none()
+        )
+        if existing_name is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Agent name already exists.")
+        company.name = name
+
+    if "email" in fields_to_update:
+        if email is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Agent email is required.")
+        normalized_email = email.strip().lower()
+        existing_email = (
+            session.query(Company)
+            .filter(Company.email == normalized_email, Company.id != company.id)
+            .one_or_none()
+        )
+        if existing_email is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Agent email already exists.")
+        company.email = normalized_email
+
+    if "phone" in fields_to_update:
+        company.phone = phone
+
+    if "description" in fields_to_update:
+        company.description = description
+
+    session.flush()
+    return company
+
+
 def list_documents(session: Session, *, company_id: str) -> list[Document]:
     """Return ingested documents for a company sorted from newest to oldest."""
     return (

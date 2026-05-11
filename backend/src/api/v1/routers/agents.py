@@ -18,6 +18,7 @@ from src.services.guardrails import (
     record_guardrail_event,
 )
 from src.services.ingestion import get_owned_company, upsert_user
+from src.services.conflict_alerts import maybe_send_conflict_alert
 from src.services.rag_agent import run_rag_agent
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -67,6 +68,17 @@ async def post_agent_chat(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=input_check.reason,
         )
+
+    await maybe_send_conflict_alert(
+        async_client=client,
+        chat_model=settings.openrouter_model,
+        sendgrid_api_key=settings.sendgrid_api_key,
+        company_id=company.id,
+        company_name=company.name,
+        recipient_email=company.email,
+        user_message=body.message,
+        language=body.language,
+    )
 
     reply, grounded, usage_charges = await run_rag_agent(
         async_client=client,

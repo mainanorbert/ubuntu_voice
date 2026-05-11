@@ -76,6 +76,11 @@ class Settings(BaseSettings):
             "model replies. Defaults to Kenya (+254)."
         ),
     )
+    sendgrid_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("SENDGRID_API_KEY"),
+        description="Optional SendGrid API key used for emerging-conflict alert emails.",
+    )
     rag_similarity_threshold: float = Field(
         default=0.25,
         ge=0.0,

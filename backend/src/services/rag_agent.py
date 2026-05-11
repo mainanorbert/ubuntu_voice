@@ -19,11 +19,13 @@ Phase 2 – Answer agent  (OpenAI Agents SDK)
 from __future__ import annotations
 
 import logging
+import re
 
 from agents import Agent, OpenAIChatCompletionsModel, Runner, function_tool, trace
 from openai import AsyncOpenAI
 from sqlalchemy.orm import Session
 
+from src.services.conflict_alerts import should_send_conflict_alert
 from src.services.cost_monitoring import UsageCharge, fetch_openrouter_generation_charges
 from src.services.rag_retrieval import (
     build_context_from_chunks,
@@ -36,9 +38,45 @@ logger = logging.getLogger(__name__)
 # ── Prompt templates ──────────────────────────────────────────────────────────
 
 _OUT_OF_SCOPE_TEMPLATES = {
-    "English": "I don't have enough trusted information in {company_name}'s knowledge base to answer that.",
-    "Swahili": "Sina taarifa za kutosha zilizoaminika kwenye hifadhidata ya {company_name} kujibu hilo.",
+    "English": (
+        "I don't have enough trusted information in {company_name}'s knowledge base to answer that. "
+        "Would you like me to look for trusted reporting contacts or local support options in this agent's documents?"
+    ),
+    "Swahili": (
+        "Sina taarifa za kutosha zilizoaminika kwenye hifadhidata ya {company_name} kujibu hilo. "
+        "Ungependa nitafute mawasiliano ya kuaminika ya kuripoti au chaguo za msaada kwenye nyaraka za wakala huyu?"
+    ),
     "French": "Je n'ai pas assez d'informations fiables dans la base de connaissances de {company_name} pour répondre à cela.",
+}
+
+_GENERAL_CONVERSATION_REPLIES = {
+    "English": (
+        "Hi, I'm here and ready to help. You can ask a general question, or ask me to look in "
+        "{company_name}'s trusted documents for local details, reporting contacts, or support options."
+    ),
+    "Swahili": (
+        "Habari, niko hapa kusaidia. Unaweza kuuliza swali la jumla, au kuniomba nitafute kwenye "
+        "nyaraka zinazoaminika za {company_name} kwa maelezo ya eneo, mawasiliano ya kuripoti, au chaguo za msaada."
+    ),
+    "French": (
+        "Bonjour, je suis la pour aider. Vous pouvez poser une question generale, ou me demander de chercher dans "
+        "les documents fiables de {company_name} des details locaux, des contacts de signalement ou des options de soutien."
+    ),
+}
+
+_CONFLICT_REPORT_REPLIES = {
+    "English": (
+        "I'm sorry you're seeing this. I can help you turn this into a short report, translate or summarize it, "
+        "or look in {company_name}'s trusted documents for reporting contacts and local support options."
+    ),
+    "Swahili": (
+        "Pole kwa hali unayoiona. Ninaweza kusaidia kuandika ripoti fupi, kuitafsiri au kuifupisha, "
+        "au kutafuta kwenye nyaraka zinazoaminika za {company_name} mawasiliano ya kuripoti na chaguo za msaada wa eneo."
+    ),
+    "French": (
+        "Je suis desole que vous voyiez cela. Je peux aider a rediger un court signalement, le traduire ou le resumer, "
+        "ou chercher dans les documents fiables de {company_name} des contacts de signalement et des options de soutien local."
+    ),
 }
 
 _ANSWER_AGENT_INSTRUCTIONS = """
@@ -55,16 +93,30 @@ and are the ONLY source of truth you may use to answer:
 {context}
 
 Rules:
-- Answer the user's question using ONLY the information in the excerpts above.
+- If the user is only greeting you, thanking you, asking how you are, or asking
+  what you can help with, respond naturally and briefly without forcing a
+  document-based answer.
+- For general, low-risk concepts that do not require local facts, such as
+  what mediation or peacebuilding means, you may give a short general answer
+  and invite the user to ask for document-specific support.
+- If the user is simply reporting an emerging conflict or violence situation
+  rather than asking for a specific local fact, acknowledge the report with
+  care and offer to help draft, translate, summarize, or look up trusted
+  reporting contacts in the agent documents.
+- For specific local facts, contacts, services, policies, eligibility,
+  locations, deadlines, or procedures, answer using ONLY the excerpts above.
 - Be clear, direct, and brief. Default to 1-3 short sentences.
 - Answer only what the user asked. Do not add background, examples, warnings,
   next steps, definitions, or related details unless the user asks for them.
 - Use bullets only if the user asks for a list or the answer has multiple
   concrete items. Keep each bullet short.
 - If the answer is yes/no, start with yes or no, then add only the needed detail.
-- If the excerpts do not contain enough information, say:
+- If the user asks for specific local details and the excerpts do not contain
+  enough information, say:
   "{out_of_scope_reply}"
-- Never fabricate facts or answer from general knowledge outside the excerpts.
+- Never fabricate local facts, contacts, services, or instructions.
+- Do not present security, legal, medical, or emergency guidance as
+  authoritative advice.
 - Call the `search_knowledge_base` tool only if a focused follow-up search is
   necessary to answer the exact user question.
 """.strip()
@@ -82,6 +134,59 @@ def build_out_of_scope_reply(*, company_name: str, language: str) -> str:
 
 
 # ── Answer-agent tool (for follow-up sub-queries) ─────────────────────────────
+
+def is_general_conversation(message: str) -> bool:
+    """Return true for lightweight chat that should not require RAG."""
+    normalized = re.sub(r"\s+", " ", message.strip().lower())
+    if not normalized or len(normalized) > 120:
+        return False
+
+    return bool(
+        re.fullmatch(r"(hi|hello|hey|good morning|good afternoon|good evening)[!.? ]*", normalized)
+        or re.fullmatch(r"(how are you|how are you doing|how's it going)[?.! ]*", normalized)
+        or re.fullmatch(r"(thanks|thank you|okay|ok|cool)[!. ]*", normalized)
+        or re.fullmatch(r"(help|can you help|what can you do|what can you help with)[?.! ]*", normalized)
+    )
+
+
+def build_general_conversation_reply(*, company_name: str, language: str) -> str:
+    """Return a localized reply for greetings and lightweight support prompts."""
+    template = _GENERAL_CONVERSATION_REPLIES.get(language, _GENERAL_CONVERSATION_REPLIES["English"])
+    return template.format(company_name=company_name)
+
+
+def is_simple_conflict_report(message: str) -> bool:
+    """Return true when the user reports conflict without asking for local facts."""
+    normalized = re.sub(r"\s+", " ", message.strip().lower())
+    if "?" in normalized or not should_send_conflict_alert(normalized):
+        return False
+    request_terms = (
+        "what",
+        "who",
+        "where",
+        "when",
+        "how",
+        "which",
+        "should",
+        "can you",
+        "could you",
+        "would you",
+        "tell me",
+        "show me",
+        "find",
+        "give me",
+        "contact",
+        "contacts",
+        "number",
+    )
+    return not any(term in normalized for term in request_terms)
+
+
+def build_conflict_report_reply(*, company_name: str, language: str) -> str:
+    """Return a courteous response for declarative emerging-conflict reports."""
+    template = _CONFLICT_REPORT_REPLIES.get(language, _CONFLICT_REPORT_REPLIES["English"])
+    return template.format(company_name=company_name)
+
 
 def make_followup_tool(
     *,
@@ -177,6 +282,22 @@ async def run_rag_agent(
     )
 
     usage_charges: list[UsageCharge] = []
+    if is_general_conversation(user_message):
+        logger.info("General conversation response: company_id=%s", company_id)
+        return (
+            build_general_conversation_reply(company_name=company_name, language=language),
+            False,
+            usage_charges,
+        )
+
+    if is_simple_conflict_report(user_message):
+        logger.info("Simple conflict report response: company_id=%s", company_id)
+        return (
+            build_conflict_report_reply(company_name=company_name, language=language),
+            False,
+            usage_charges,
+        )
+
     out_of_scope_reply = build_out_of_scope_reply(company_name=company_name, language=language)
 
     query_vector, usage_charge = await embed_query(
