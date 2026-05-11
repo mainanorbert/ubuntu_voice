@@ -35,6 +35,7 @@ type CompanyResponse = {
   name: string
   email: string
   phone: string | null
+  description: string | null
   owner_id: string
   created_at: string
 }
@@ -266,6 +267,7 @@ export default function DocumentsPage() {
   const [company_name, set_company_name] = useState("")
   const [company_email, set_company_email] = useState("")
   const [company_phone, set_company_phone] = useState("")
+  const [company_description, set_company_description] = useState("")
   const [show_create_form, set_show_create_form] = useState(false)
 
   const [queued_files, set_queued_files] = useState<QueuedFile[]>([])
@@ -335,6 +337,7 @@ export default function DocumentsPage() {
     const name = company_name.trim()
     const email = company_email.trim()
     const phone = company_phone.trim()
+    const description = company_description.trim()
     if (!name || !email) return
     set_creating_company(true)
     set_error(null)
@@ -342,7 +345,7 @@ export default function DocumentsPage() {
       const res = await fetch("/api/ingestion/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, ...(phone ? { phone } : {}) }),
+        body: JSON.stringify({ name, email, ...(phone ? { phone } : {}), ...(description ? { description } : {}) }),
       })
       const data: unknown = await res.json().catch(() => ({}))
       if (!res.ok) { set_error(format_error_payload(data)); return }
@@ -351,13 +354,14 @@ export default function DocumentsPage() {
       set_company_name("")
       set_company_email("")
       set_company_phone("")
+      set_company_description("")
       set_show_create_form(false)
       set_companies((prev) => (prev.some((c) => c.id === created.id) ? prev : [...prev, created as CompanyResponse]))
       set_selected_company_id(created.id)
     } finally {
       set_creating_company(false)
     }
-  }, [company_name, company_email, company_phone])
+  }, [company_description, company_name, company_email, company_phone])
 
   // ── File queue management ──────────────────────────────────────────────────
 
@@ -537,6 +541,7 @@ export default function DocumentsPage() {
 
   const can_create_company =
     company_name.trim().length > 0 && company_email.trim().length > 0
+  const description_length = company_description.length
   const selected_company = companies.find((c) => c.id === selected_company_id)
 
   return (
@@ -573,7 +578,7 @@ export default function DocumentsPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <Building2 className="size-3.5" />
-                    Companies
+                    Agents
                   </h2>
                   <Button
                     type="button"
@@ -606,6 +611,11 @@ export default function DocumentsPage() {
                         <span className="font-medium leading-tight">{c.name}</span>
                         <span className="truncate text-xs text-muted-foreground">{c.email}</span>
                         {c.phone ? <span className="truncate text-xs text-muted-foreground">{c.phone}</span> : null}
+                        {c.description ? (
+                          <span className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                            {c.description}
+                          </span>
+                        ) : null}
                       </button>
                     ))
                   )}
@@ -646,6 +656,19 @@ export default function DocumentsPage() {
                       placeholder="+254712345678 (optional)"
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
                     />
+                    <div>
+                      <textarea
+                        value={company_description}
+                        maxLength={300}
+                        rows={4}
+                        onChange={(e) => set_company_description(e.target.value)}
+                        placeholder="Agent purpose, audience, or document focus (optional)"
+                        className="min-h-24 w-full resize-none rounded-lg border border-input bg-background px-2.5 py-2 text-sm outline-none focus-visible:border-ring"
+                      />
+                      <p className="mt-1 text-right text-[11px] text-muted-foreground">
+                        {description_length}/300
+                      </p>
+                    </div>
                     <Button
                       type="button"
                       size="sm"
@@ -671,9 +694,14 @@ export default function DocumentsPage() {
                     Upload documents
                   </h2>
                   {selected_company && (
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      Uploading to <span className="font-medium text-foreground">{selected_company.name}</span>
-                    </p>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      <p>
+                        Uploading to <span className="font-medium text-foreground">{selected_company.name}</span>
+                      </p>
+                      {selected_company.description ? (
+                        <p className="mt-1 leading-relaxed">{selected_company.description}</p>
+                      ) : null}
+                    </div>
                   )}
                 </div>
 

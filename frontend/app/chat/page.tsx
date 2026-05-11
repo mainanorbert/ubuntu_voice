@@ -38,6 +38,7 @@ type CompanyResponse = {
   name: string
   email: string
   phone: string | null
+  description: string | null
   owner_id: string
   created_at: string
 }
@@ -902,7 +903,7 @@ export default function ChatPage() {
           <section className="rounded-2xl border border-border/80 bg-card/90 p-4 shadow-sm backdrop-blur-sm">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
               <Building2 className="size-4 text-primary" aria-hidden />
-              Knowledge base
+              Available Agents
             </div>
             {page_loading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -930,16 +931,21 @@ export default function ChatPage() {
                 >
                   {companies.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} ({c.email})
+                      {c.name}
                     </option>
                   ))}
                 </select>
                 {selected_company && (
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    Retrieval is scoped to{" "}
-                    <span className="font-medium text-foreground">{selected_company.name}</span>
-                    &apos;s embedded documents.
-                  </p>
+                  <div className="text-xs leading-relaxed text-muted-foreground">
+                    <p>
+                      Retrieval is scoped to{" "}
+                      <span className="font-medium text-foreground">{selected_company.name}</span>
+                      &apos;s embedded documents.
+                    </p>
+                    {selected_company.description ? (
+                      <p className="mt-1">{selected_company.description}</p>
+                    ) : null}
+                  </div>
                 )}
               </div>
             )}
