@@ -26,3 +26,8 @@
 - For broad changes, plan first and wait for approval before editing.
 - Keep diffs scoped to the requested task; do not perform unrelated rebrands or refactors.
 - Show the final diff summary and list verification commands run.
+
+
+## Logging
+- Log all failed database connections at the `CRITICAL` level.
+- Do not include PII (emails, passwords) in any logs.
