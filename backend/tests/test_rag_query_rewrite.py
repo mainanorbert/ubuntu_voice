@@ -49,6 +49,7 @@ def test_prepare_retrieval_query_can_skip_general_chat() -> None:
     assert query == ""
     assert charge is None
     assert calls[0]["model"] == "test-model"
+    assert "Current company/agent knowledge base: Ubuntu Voice" in calls[0]["messages"][0]["content"]
 
 
 def test_prepare_retrieval_query_rewrites_followup_fact_question() -> None:
@@ -84,4 +85,5 @@ def test_prepare_retrieval_query_rewrites_followup_fact_question() -> None:
     assert needs_retrieval is True
     assert query == "Goma support desk contact"
     assert charge is None
+    assert "Current company/agent knowledge base: Ubuntu Voice" in calls[0]["messages"][0]["content"]
     assert "Tell me about services in Goma." in calls[0]["messages"][1]["content"]

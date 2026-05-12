@@ -41,27 +41,38 @@ logger = logging.getLogger(__name__)
 _QUERY_REWRITE_PROMPT = """
 You prepare the user's latest message for a knowledge-base retrieval pipeline.
 
-Decide whether the latest message needs trusted document retrieval.
+Decide whether the latest message needs trusted document retrieval from the
+current company/agent knowledge base.
+
+Current company/agent knowledge base: {company_name}
 
 Retrieval is NOT needed for greetings, thanks, small talk, simple help prompts,
 or broad low-risk concepts that can be answered generally.
 
+Retrieval is also NOT needed when the user is clearly asking for facts about a
+different company, country, organization, topic, or place than the current
+company/agent knowledge base. For example, if the current knowledge base is
+about Congo and the user asks "what happened between 1996-1997 in USA", return
+needs_retrieval=false because the question is clear but outside the current
+knowledge-base scope.
+
 Retrieval IS needed for specific facts, contacts, services, policies,
 eligibility, locations, deadlines, procedures, document-specific questions, or
-follow-up questions that depend on facts from the knowledge base.
+follow-up questions that depend on facts from the current company/agent
+knowledge base.
 
 When retrieval is needed, rewrite the latest message into one short, specific
 search query. Use conversation history only to resolve references like "it",
 "that program", "there", "those contacts", or vague follow-ups. Preserve
 important entities, places, dates, services, and constraints. Add missing
 context from history when it improves retrieval, for example turn "What caused
-this war?" after a discussion about Congo into "causes of the war in Congo".
+this war?" after a discussion about Congo Kinshasa into "causes of the war in Congo kinshasa".
 
 Return ONLY valid JSON in this exact shape:
-{"needs_retrieval": true, "query": "focused search query"}
+{{"needs_retrieval": true, "query": "focused search query"}}
 
 If retrieval is not needed, return:
-{"needs_retrieval": false, "query": ""}
+{{"needs_retrieval": false, "query": ""}}
 """.strip()
 
 _ANSWER_AGENT_INSTRUCTIONS = """
@@ -69,6 +80,10 @@ You are Ubuntu Voice, a concise support assistant for {company_name}.
 
 The user understands {language} as their primary language. Always respond in
 {language} so communication is clear.
+
+You are currently scoped only to {company_name}'s knowledge base. Do not answer
+as if you know other companies, agents, organizations, countries, or external
+knowledge bases unless trusted excerpts for them are provided here.
 
 Current user question:
 {user_question}
@@ -94,6 +109,11 @@ Rules:
 - For specific local facts, contacts, services, policies, eligibility,
   locations, deadlines, procedures, or document-specific questions, answer using
   ONLY the trusted excerpts.
+- If the user asks a factual or document-specific question about a different
+  company, agent, organization, country, place, or corpus than {company_name},
+  clearly say that you are only aware of {company_name}'s knowledge base for
+  now, and ask them to select or provide the relevant knowledge base if they
+  want that answer.
 - If retrieval was needed but no trusted excerpts were found, or the excerpts do
   not answer the question, say you do not have enough trusted information in
   {company_name}'s knowledge base to answer that. Offer to look for trusted
@@ -153,11 +173,10 @@ async def prepare_retrieval_query(
     response = await async_client.chat.completions.create(
         model=chat_model,
         messages=[
-            {"role": "system", "content": _QUERY_REWRITE_PROMPT},
+            {"role": "system", "content": _QUERY_REWRITE_PROMPT.format(company_name=company_name)},
             {
                 "role": "user",
                 "content": (
-                    f"Company/agent name: {company_name}\n\n"
                     f"Conversation history:\n{format_chat_history(history)}\n\n"
                     f"Latest user message:\n{user_message}\n\n"
                     "Return the JSON retrieval decision now."
