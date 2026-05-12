@@ -46,7 +46,7 @@ When a WhatsApp webhook arrives:
 4. The existing RAG pipeline runs with that company's documents only.
 5. The reply is sent back to Twilio's `From` number through the Messages API.
 
-If no unique agent matches the inbound number, the webhook returns `OK` without sending a reply. This prevents a message sent to one WhatsApp number from being answered by the wrong agent.
+If no unique agent matches the inbound number, the webhook returns an empty success response without sending a reply. This prevents a message sent to one WhatsApp number from being answered by the wrong agent.
 
 ## Behavior
 

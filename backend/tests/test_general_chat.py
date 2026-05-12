@@ -1,38 +1,33 @@
-"""Tests for non-RAG conversational chat behavior."""
+"""Tests for prompt-based query preparation decisions."""
 
-from src.services.rag_agent import (
-    build_conflict_report_reply,
-    build_general_conversation_reply,
-    is_general_conversation,
-    is_simple_conflict_report,
-)
+from src.services.rag_agent import parse_query_preparation
 
 
-def test_general_conversation_detection_handles_greetings() -> None:
-    """Short greetings and simple help prompts bypass document retrieval."""
-    assert is_general_conversation("hi")
-    assert is_general_conversation("How are you?")
-    assert is_general_conversation("what can you help with?")
-    assert not is_general_conversation("What does the document say about reporting contacts in Goma?")
+def test_parse_query_preparation_skips_retrieval_for_general_chat() -> None:
+    """Prompt decisions can skip retrieval for general conversation."""
+    needs_retrieval, query = parse_query_preparation(
+        '{"needs_retrieval": false, "query": ""}',
+        fallback_query="hi",
+    )
+
+    assert needs_retrieval is False
+    assert query == ""
 
 
-def test_general_conversation_reply_mentions_agent_documents() -> None:
-    """General replies remain helpful while pointing users back to trusted sources."""
-    reply = build_general_conversation_reply(company_name="Sahel Peace Mediator", language="English")
-    assert "ready to help" in reply
-    assert "Sahel Peace Mediator's trusted documents" in reply
-    assert "reporting contacts" in reply
+def test_parse_query_preparation_uses_rewritten_fact_query() -> None:
+    """Prompt decisions can provide a focused query for factual retrieval."""
+    needs_retrieval, query = parse_query_preparation(
+        '{"needs_retrieval": true, "query": "Goma reporting contacts for displaced women"}',
+        fallback_query="Who can I contact there?",
+    )
+
+    assert needs_retrieval is True
+    assert query == "Goma reporting contacts for displaced women"
 
 
-def test_simple_conflict_report_bypasses_rag_fallback() -> None:
-    """Declarative emerging-conflict reports get a courteous support response."""
-    assert is_simple_conflict_report("There is a war about to break in Kinshasa due to armed men in the city")
-    assert not is_simple_conflict_report("There is a war about to break in Kinshasa. Who can I contact?")
+def test_parse_query_preparation_falls_back_to_retrieval_on_bad_json() -> None:
+    """Malformed model output falls back to retrieval instead of skipping facts."""
+    needs_retrieval, query = parse_query_preparation("not json", fallback_query="Where is the office?")
 
-
-def test_conflict_report_reply_offers_support_options() -> None:
-    """Conflict-report replies ask how to help without inventing local contacts."""
-    reply = build_conflict_report_reply(company_name="DRC Women Peacebuilders", language="English")
-    assert "short report" in reply
-    assert "trusted documents" in reply
-    assert "reporting contacts" in reply
+    assert needs_retrieval is True
+    assert query == "Where is the office?"

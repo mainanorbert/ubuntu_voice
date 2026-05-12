@@ -1,14 +1,9 @@
-"""Tests for chat language selection and localized fallback responses."""
+"""Tests for chat request language and history validation."""
 
 import pytest
 from pydantic import ValidationError
 
 from src.api.v1.schemas.agent import AgentChatRequest
-from src.services.rag_agent import (
-    build_general_conversation_reply,
-    build_out_of_scope_reply,
-    is_general_conversation,
-)
 
 
 def test_agent_chat_request_accepts_supported_languages() -> None:
@@ -22,6 +17,7 @@ def test_agent_chat_request_defaults_to_english() -> None:
     """Missing language keeps backward-compatible English behavior."""
     request = AgentChatRequest(company_id="company_1", message="Hello")
     assert request.language == "English"
+    assert request.history == []
 
 
 def test_agent_chat_request_rejects_unsupported_language() -> None:
@@ -30,15 +26,26 @@ def test_agent_chat_request_rejects_unsupported_language() -> None:
         AgentChatRequest(company_id="company_1", message="Hello", language="Arabic")
 
 
-def test_out_of_scope_reply_is_localized() -> None:
-    """No-context fallback replies are fixed strings in the selected language."""
-    company_name = "Ubuntu Voice"
-    assert build_out_of_scope_reply(company_name=company_name, language="English").startswith(
-        "I don't have enough trusted information in Ubuntu Voice's knowledge base to answer that."
+def test_agent_chat_request_accepts_recent_history() -> None:
+    """Chat requests may include bounded recent turns for follow-up retrieval."""
+    request = AgentChatRequest(
+        company_id="company_1",
+        message="Who can I contact there?",
+        history=[
+            {"role": "user", "content": "Tell me about support in Goma."},
+            {"role": "assistant", "content": "The document mentions a Goma support desk."},
+        ],
     )
-    assert build_out_of_scope_reply(company_name=company_name, language="Swahili").startswith(
-        "Sina taarifa za kutosha zilizoaminika kwenye hifadhidata ya Ubuntu Voice kujibu hilo."
-    )
-    assert build_out_of_scope_reply(company_name=company_name, language="French").startswith(
-        "Je n'ai pas assez d'informations fiables dans la base de connaissances de Ubuntu Voice pour répondre à cela."
-    )
+
+    assert request.history[0].role == "user"
+    assert request.history[1].content == "The document mentions a Goma support desk."
+
+
+def test_agent_chat_request_rejects_too_much_history() -> None:
+    """History is capped to keep request context small and privacy-preserving."""
+    with pytest.raises(ValidationError):
+        AgentChatRequest(
+            company_id="company_1",
+            message="Continue",
+            history=[{"role": "user", "content": f"turn {index}"} for index in range(9)],
+        )

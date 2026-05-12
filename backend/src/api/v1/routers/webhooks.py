@@ -29,6 +29,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 legacy_router = APIRouter(tags=["webhooks"])
 
 WHATSAPP_FALLBACK_REPLY = "Sorry, I'm having trouble processing that right now. Please try again shortly."
+WHATSAPP_ACK_RESPONSE = PlainTextResponse("")
 
 
 async def build_whatsapp_agent_reply(
@@ -71,7 +72,7 @@ async def build_whatsapp_agent_reply(
         language="English",
     )
 
-    rag_result = await run_rag_agent(
+    reply, _grounded, usage_charges = await run_rag_agent(
         async_client=client,
         db_session=db_session,
         company_id=company.id,
@@ -86,10 +87,6 @@ async def build_whatsapp_agent_reply(
         openrouter_api_key=settings.openrouter_api_key,
         openrouter_base_url=settings.openrouter_base_url,
     )
-    if len(rag_result) == 4:
-        reply, _grounded, _reply_type, usage_charges = rag_result
-    else:
-        reply, _grounded, usage_charges = rag_result
 
     if usage_charges:
         record_user_spend(
@@ -126,11 +123,11 @@ async def handle_twilio_whatsapp_webhook(
     client: Annotated[AsyncOpenAI, Depends(get_openrouter_client)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> PlainTextResponse:
-    """Receive a Twilio WhatsApp message, answer with the matched tenant agent, and return OK."""
+    """Receive a Twilio WhatsApp message, answer with the matched tenant agent, and acknowledge it."""
     form = await request.form()
     inbound = parse_twilio_whatsapp_message(form)
     if not inbound.body or not inbound.from_number:
-        return PlainTextResponse("OK")
+        return WHATSAPP_ACK_RESPONSE
 
     company = resolve_company_by_whatsapp_number(
         db_session,
@@ -139,12 +136,12 @@ async def handle_twilio_whatsapp_webhook(
     )
     if company is None:
         logger.warning("Ignoring WhatsApp webhook because no unique agent matched the inbound recipient number.")
-        return PlainTextResponse("OK")
+        return WHATSAPP_ACK_RESPONSE
 
     sender_number = inbound.to_number or settings.twilio_whatsapp_number
     if sender_number is None:
         logger.warning("Ignoring WhatsApp webhook because no Twilio sender number was available.")
-        return PlainTextResponse("OK")
+        return WHATSAPP_ACK_RESPONSE
 
     try:
         reply = await build_whatsapp_agent_reply(
@@ -176,7 +173,7 @@ async def handle_twilio_whatsapp_webhook(
             exc.__class__.__name__,
         )
 
-    return PlainTextResponse("OK")
+    return WHATSAPP_ACK_RESPONSE
 
 
 router.add_api_route("/whatsapp/twilio", handle_twilio_whatsapp_webhook, methods=["POST"])

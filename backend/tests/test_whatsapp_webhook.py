@@ -73,7 +73,7 @@ def test_twilio_whatsapp_webhook_uses_agent_assigned_to_inbound_number(tmp_path,
             )
 
         assert response.status_code == 200
-        assert response.text == "OK"
+        assert response.text == ""
         assert agent_calls[0]["company"].name == "Congo Agent"
         assert agent_calls[0]["user_message"] == "hi, how are you"
         assert sent_replies[0]["from_number"] == "whatsapp:+15551234567"
@@ -119,7 +119,7 @@ def test_twilio_whatsapp_webhook_ignores_unknown_inbound_number(tmp_path, monkey
             )
 
         assert response.status_code == 200
-        assert response.text == "OK"
+        assert response.text == ""
         assert sent_replies == []
     finally:
         clear_database_caches()

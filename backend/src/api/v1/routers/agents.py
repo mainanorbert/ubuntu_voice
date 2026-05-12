@@ -34,10 +34,10 @@ async def post_agent_chat(
 ) -> AgentChatResponse:
     """Run the two-phase RAG agent pipeline for the authenticated owner's company.
 
-    Phase 1: A retrieval agent calls the ``search_knowledge_base`` tool which
-    embeds the user's question and queries pgvector for the tenant's chunks.
-    Phase 2: An answer agent receives the verified context and produces the
-    final customer-facing reply. Both phases run inside a single trace.
+    Phase 1: A prompt prepares the latest message for retrieval using recent
+    history, skipping retrieval for general conversation. Phase 2: the answer
+    agent receives the current message, history, retrieval status, and any
+    trusted excerpts before producing the final reply.
 
     Returns HTTP 404 when the company_id is not found or does not belong to
     the authenticated user.
@@ -86,6 +86,7 @@ async def post_agent_chat(
         company_id=company.id,
         company_name=company.name,
         user_message=body.message,
+        history=[turn.model_dump() for turn in body.history],
         language=body.language,
         chat_model=settings.openrouter_model,
         embedding_model=settings.embedding_model,
