@@ -33,6 +33,11 @@ type ChatMessage = {
   grounded: boolean | null
 }
 
+type ChatHistoryMessage = {
+  role: ChatRole
+  content: string
+}
+
 type CompanyResponse = {
   id: string
   name: string
@@ -184,6 +189,19 @@ const voice_bar_heights = ["h-6", "h-10", "h-7", "h-12", "h-8", "h-14", "h-9", "
  */
 function locale_for_language(language: ChatLanguage): string {
   return language_options.find((option) => option.label === language)?.locale ?? "en-US"
+}
+
+/**
+ * Keeps only compact recent turns for contextual retrieval on the next request.
+ */
+function build_chat_history(messages: ChatMessage[]): ChatHistoryMessage[] {
+  return messages
+    .filter((message) => message.content.trim().length > 0)
+    .slice(-8)
+    .map((message) => ({
+      role: message.role,
+      content: message.content.trim().slice(0, 1200),
+    }))
 }
 
 /**
@@ -454,6 +472,7 @@ export default function ChatPage() {
       set_pending(true)
       pending_ref.current = true
       set_draft("")
+      const history = build_chat_history(messages)
 
       if (show_user_message) {
         const user_message: ChatMessage = {
@@ -469,7 +488,7 @@ export default function ChatPage() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ company_id, message: text, language: selected_language_ref.current }),
+          body: JSON.stringify({ company_id, message: text, language: selected_language_ref.current, history }),
         })
 
         const data: unknown = await res.json().catch(() => ({}))
@@ -499,7 +518,7 @@ export default function ChatPage() {
         set_pending(false)
       }
     },
-    [append_assistant_message, draft],
+    [append_assistant_message, draft, messages],
   )
 
   const handle_voice_transcript = useCallback(
