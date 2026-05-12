@@ -55,7 +55,7 @@ flowchart TD
 - Similarity thresholding happens before generation. If retrieval is weak or empty, the backend returns a fixed fallback instead of asking the LLM to guess.
 - The answer model receives retrieved excerpts as the only source of truth.
 - The chat prompt is intentionally concise: answer only what was asked, default to 1-3 short sentences, and avoid extra detail.
-- Language selection is request-scoped. Supported chat languages are English, Swahili, and French.
+- Language selection is request-scoped. Supported chat languages are English, Swahili, French, Arabic, and Portuguese.
 - The selected language is injected into the RAG prompt, and no-context fallbacks are localized without relying on the LLM.
 - Input guardrails block oversized prompts before model calls.
 - Output guardrails monitor replies for configured personal information patterns and write audit events.

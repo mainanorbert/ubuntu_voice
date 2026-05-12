@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
 
-const SUPPORTED_LANGUAGES = ["English", "Swahili", "French"] as const
+const SUPPORTED_LANGUAGES = ["English", "Swahili", "French", "Arabic", "Portuguese"] as const
 type ChatLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 type ChatHistoryMessage = { role: "user" | "assistant"; content: string }
 
@@ -72,7 +72,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const parsed = parse_chat_body(raw)
   if (!parsed) {
     return NextResponse.json(
-      { error: "company_id and message are required, language must be English, Swahili, or French, and history must be recent chat turns" },
+      {
+        error:
+          "company_id and message are required, language must be English, Swahili, French, Arabic, or Portuguese, and history must be recent chat turns",
+      },
       { status: 400 },
     )
   }

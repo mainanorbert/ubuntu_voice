@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-ChatLanguage = Literal["English", "Swahili", "French"]
+ChatLanguage = Literal["English", "Swahili", "French", "Arabic", "Portuguese"]
 ChatHistoryRole = Literal["user", "assistant"]
 
 
@@ -28,7 +28,7 @@ class AgentChatRequest(BaseModel):
     language: ChatLanguage = Field(
         default="English",
         description="Primary language the assistant must use when answering.",
-        examples=["English", "Swahili", "French"],
+        examples=["English", "Swahili", "French", "Arabic", "Portuguese"],
     )
     history: list[ChatHistoryMessage] = Field(
         default_factory=list,

@@ -53,7 +53,7 @@ type AgentChatResponse = {
   grounded?: boolean | null
 }
 
-type ChatLanguage = "English" | "Swahili" | "French"
+type ChatLanguage = "English" | "Swahili" | "French" | "Arabic" | "Portuguese"
 
 type LanguageOption = {
   label: ChatLanguage
@@ -180,6 +180,8 @@ const language_options: LanguageOption[] = [
   { label: "English", locale: "en-US" },
   { label: "Swahili", locale: "sw-KE" },
   { label: "French", locale: "fr-FR" },
+  { label: "Arabic", locale: "ar" },
+  { label: "Portuguese", locale: "pt-PT" },
 ]
 
 const voice_bar_heights = ["h-6", "h-10", "h-7", "h-12", "h-8", "h-14", "h-9", "h-11", "h-7", "h-12", "h-8", "h-10"]

@@ -8,7 +8,7 @@ from src.api.v1.schemas.agent import AgentChatRequest
 
 def test_agent_chat_request_accepts_supported_languages() -> None:
     """Chat requests accept the supported MVP language set."""
-    for language in ["English", "Swahili", "French"]:
+    for language in ["English", "Swahili", "French", "Arabic", "Portuguese"]:
         request = AgentChatRequest(company_id="company_1", message="Hello", language=language)
         assert request.language == language
 
@@ -23,7 +23,7 @@ def test_agent_chat_request_defaults_to_english() -> None:
 def test_agent_chat_request_rejects_unsupported_language() -> None:
     """Unsupported language names are rejected before prompt construction."""
     with pytest.raises(ValidationError):
-        AgentChatRequest(company_id="company_1", message="Hello", language="Arabic")
+        AgentChatRequest(company_id="company_1", message="Hello", language="German")
 
 
 def test_agent_chat_request_accepts_recent_history() -> None:
