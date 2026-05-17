@@ -96,6 +96,26 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("TWILIO_WHATSAPP_NUMBER"),
         description="Optional Twilio WhatsApp sender, formatted like whatsapp:+15551234567.",
     )
+    twilio_sms_from_number: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TWILIO_SMS_FROM_NUMBER"),
+        description="Optional Twilio SMS sender number in E.164 format.",
+    )
+    twilio_sms_to_number: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TWILIO_SMS_TO_NUMBER"),
+        description="Optional Twilio SMS recipient number in E.164 format for conflict alerts.",
+    )
+    pushover_user: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("PUSHOVER_USER"),
+        description="Optional Pushover recipient user key for conflict-alert push notifications.",
+    )
+    pushover_token: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("PUSHOVER_TOKEN"),
+        description="Optional Pushover application token for conflict-alert push notifications.",
+    )
     rag_similarity_threshold: float = Field(
         default=0.25,
         ge=0.0,

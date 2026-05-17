@@ -55,8 +55,10 @@ def test_redact_personal_contact_details_preserves_location_context() -> None:
 
 
 def test_maybe_send_conflict_alert_uses_dynamic_email_fields(monkeypatch) -> None:
-    """Agent decision and draft outputs drive the sent alert email."""
-    calls: list[dict] = []
+    """Agent decision and draft outputs drive parallel alert delivery."""
+    email_calls: list[dict] = []
+    sms_calls: list[dict] = []
+    push_calls: list[dict] = []
 
     async def fake_decide_conflict_alert(**_kwargs) -> ConflictAlertDecision:
         return ConflictAlertDecision(send_alert=True)
@@ -68,17 +70,31 @@ def test_maybe_send_conflict_alert_uses_dynamic_email_fields(monkeypatch) -> Non
         )
 
     async def fake_send_conflict_alert_email(**kwargs) -> None:
-        calls.append(kwargs)
+        email_calls.append(kwargs)
+
+    async def fake_send_conflict_alert_sms(**kwargs) -> None:
+        sms_calls.append(kwargs)
+
+    async def fake_send_conflict_alert_push(**kwargs) -> None:
+        push_calls.append(kwargs)
 
     monkeypatch.setattr(conflict_alerts, "decide_conflict_alert", fake_decide_conflict_alert)
     monkeypatch.setattr(conflict_alerts, "draft_conflict_alert", fake_draft_conflict_alert)
     monkeypatch.setattr(conflict_alerts, "send_conflict_alert_email", fake_send_conflict_alert_email)
+    monkeypatch.setattr(conflict_alerts, "send_conflict_alert_sms", fake_send_conflict_alert_sms)
+    monkeypatch.setattr(conflict_alerts, "send_conflict_alert_push", fake_send_conflict_alert_push)
 
     sent = asyncio.run(
         maybe_send_conflict_alert(
             async_client=object(),
             chat_model="openai/gpt-4o-mini",
             sendgrid_api_key="test-key",
+            twilio_account_sid="AC123",
+            twilio_auth_token="token",
+            twilio_sms_from_number="+19015997398",
+            twilio_sms_to_number="+18777804236",
+            pushover_user="user-key",
+            pushover_token="app-token",
             company_id="company_123",
             company_name="DRC Women Peacebuilders",
             recipient_email="agent-contact@example.org",
@@ -88,13 +104,21 @@ def test_maybe_send_conflict_alert_uses_dynamic_email_fields(monkeypatch) -> Non
     )
 
     assert sent is True
-    assert calls[0]["sendgrid_api_key"] == "test-key"
-    assert calls[0]["sender_email"] == "osiemomaina85@gmail.com"
-    assert calls[0]["recipient_email"] == "agent-contact@example.org"
-    assert calls[0]["alert"].subject == "Urgent report for DRC Women Peacebuilders"
-    assert "Agent: DRC Women Peacebuilders" in calls[0]["alert"].body
-    assert "Detected at:" in calls[0]["alert"].body
-    assert "City X" in calls[0]["alert"].body
+    assert email_calls[0]["sendgrid_api_key"] == "test-key"
+    assert email_calls[0]["sender_email"] == "osiemomaina85@gmail.com"
+    assert email_calls[0]["recipient_email"] == "agent-contact@example.org"
+    assert email_calls[0]["alert"].subject == "Urgent report for DRC Women Peacebuilders"
+    assert "Agent: DRC Women Peacebuilders" in email_calls[0]["alert"].body
+    assert "Detected at:" in email_calls[0]["alert"].body
+    assert "City X" in email_calls[0]["alert"].body
+    assert sms_calls[0]["twilio_account_sid"] == "AC123"
+    assert sms_calls[0]["twilio_auth_token"] == "token"
+    assert sms_calls[0]["from_number"] == "+19015997398"
+    assert sms_calls[0]["to_number"] == "+18777804236"
+    assert sms_calls[0]["alert"].subject == "Urgent report for DRC Women Peacebuilders"
+    assert push_calls[0]["pushover_user"] == "user-key"
+    assert push_calls[0]["pushover_token"] == "app-token"
+    assert push_calls[0]["alert"].subject == "Urgent report for DRC Women Peacebuilders"
 
 
 def test_maybe_send_conflict_alert_skips_when_decision_agent_says_false(monkeypatch) -> None:

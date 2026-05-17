@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import logging
@@ -15,6 +16,8 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 SENDGRID_SEND_URL = "https://api.sendgrid.com/v3/mail/send"
+TWILIO_MESSAGES_URL_TEMPLATE = "https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
+PUSHOVER_MESSAGES_URL = "https://api.pushover.net/1/messages.json"
 CONFLICT_ALERT_SENDER_EMAIL = "osiemomaina85@gmail.com"
 
 _CONFLICT_KEYWORDS = (
@@ -200,6 +203,45 @@ async def send_conflict_alert_email(
     response.raise_for_status()
 
 
+async def send_conflict_alert_sms(
+    *,
+    twilio_account_sid: str,
+    twilio_auth_token: str,
+    from_number: str,
+    to_number: str,
+    alert: ConflictAlert,
+) -> None:
+    """Send a concise conflict alert SMS through Twilio's Messages REST API."""
+    body = f"{alert.subject}\n{alert.body}"
+    url = TWILIO_MESSAGES_URL_TEMPLATE.format(account_sid=twilio_account_sid)
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.post(
+            url,
+            data={"From": from_number, "To": to_number, "Body": body},
+            auth=(twilio_account_sid, twilio_auth_token),
+        )
+    response.raise_for_status()
+
+
+async def send_conflict_alert_push(
+    *,
+    pushover_user: str,
+    pushover_token: str,
+    alert: ConflictAlert,
+) -> None:
+    """Send a concise conflict-alert push notification through Pushover."""
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.post(
+            PUSHOVER_MESSAGES_URL,
+            data={
+                "user": pushover_user,
+                "token": pushover_token,
+                "message": f"{alert.subject}\n{alert.body}",
+            },
+        )
+    response.raise_for_status()
+
+
 async def maybe_send_conflict_alert(
     *,
     async_client: AsyncOpenAI,
@@ -210,8 +252,14 @@ async def maybe_send_conflict_alert(
     recipient_email: str,
     user_message: str,
     language: str,
+    twilio_account_sid: str | None = None,
+    twilio_auth_token: str | None = None,
+    twilio_sms_from_number: str | None = None,
+    twilio_sms_to_number: str | None = None,
+    pushover_user: str | None = None,
+    pushover_token: str | None = None,
 ) -> bool:
-    """Use alert agents to decide, draft, and send a conflict alert email."""
+    """Use alert agents to decide, draft, and send alert email plus optional SMS/push."""
     try:
         decision = await decide_conflict_alert(
             async_client=async_client,
@@ -259,25 +307,81 @@ async def maybe_send_conflict_alert(
         detected_at=detected_at,
         draft=draft,
     )
-    try:
-        await send_conflict_alert_email(
+    email_task = asyncio.create_task(
+        send_conflict_alert_email(
             sendgrid_api_key=sendgrid_api_key,
             sender_email=CONFLICT_ALERT_SENDER_EMAIL,
             recipient_email=recipient_email,
             alert=alert,
         )
-    except httpx.HTTPError as exc:
+    )
+    sms_task = None
+    if all(
+        [
+            twilio_account_sid,
+            twilio_auth_token,
+            twilio_sms_from_number,
+            twilio_sms_to_number,
+        ]
+    ):
+        sms_task = asyncio.create_task(
+            send_conflict_alert_sms(
+                twilio_account_sid=twilio_account_sid,
+                twilio_auth_token=twilio_auth_token,
+                from_number=twilio_sms_from_number,
+                to_number=twilio_sms_to_number,
+                alert=alert,
+            )
+        )
+    else:
+        logger.info("Conflict alert SMS skipped because Twilio SMS settings are incomplete: company_id=%s", company_id)
+
+    push_task = None
+    if pushover_user and pushover_token:
+        push_task = asyncio.create_task(
+            send_conflict_alert_push(
+                pushover_user=pushover_user,
+                pushover_token=pushover_token,
+                alert=alert,
+            )
+        )
+    else:
+        logger.info("Conflict alert push skipped because Pushover settings are incomplete: company_id=%s", company_id)
+
+    results = await asyncio.gather(
+        *(task for task in (email_task, sms_task, push_task) if task is not None),
+        return_exceptions=True,
+    )
+    email_result = results[0]
+    if isinstance(email_result, Exception):
         logger.warning(
-            "Conflict alert email failed: company_id=%s recipient=%s status_error=%s",
+            "Conflict alert email failed: company_id=%s status_error=%s",
             company_id,
-            recipient_email,
-            exc.__class__.__name__,
+            email_result.__class__.__name__,
         )
         return False
 
-    logger.info(
-        "Conflict alert email sent: company_id=%s recipient=%s",
-        company_id,
-        recipient_email,
-    )
+    if sms_task is not None and len(results) > 1:
+        sms_result = results[1]
+        if isinstance(sms_result, Exception):
+            logger.warning(
+                "Conflict alert SMS failed: company_id=%s status_error=%s",
+                company_id,
+                sms_result.__class__.__name__,
+            )
+        else:
+            logger.info("Conflict alert SMS sent: company_id=%s", company_id)
+
+    if push_task is not None:
+        push_result = results[-1]
+        if isinstance(push_result, Exception):
+            logger.warning(
+                "Conflict alert push failed: company_id=%s status_error=%s",
+                company_id,
+                push_result.__class__.__name__,
+            )
+        else:
+            logger.info("Conflict alert push sent: company_id=%s", company_id)
+
+    logger.info("Conflict alert email sent: company_id=%s", company_id)
     return True
