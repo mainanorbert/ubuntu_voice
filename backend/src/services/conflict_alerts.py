@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from html import escape
 import logging
 import re
 
@@ -15,10 +16,10 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-SENDGRID_SEND_URL = "https://api.sendgrid.com/v3/mail/send"
+RESEND_SEND_URL = "https://api.resend.com/emails"
 TWILIO_MESSAGES_URL_TEMPLATE = "https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
 PUSHOVER_MESSAGES_URL = "https://api.pushover.net/1/messages.json"
-CONFLICT_ALERT_SENDER_EMAIL = "osiemomaina85@gmail.com"
+CONFLICT_ALERT_SENDER = "Ubuntu invoice <onboarding@resend.dev>"
 
 _CONFLICT_KEYWORDS = (
     "war",
@@ -179,23 +180,22 @@ async def draft_conflict_alert(
 
 async def send_conflict_alert_email(
     *,
-    sendgrid_api_key: str,
-    sender_email: str,
+    resend_api_key: str,
     recipient_email: str,
     alert: ConflictAlert,
 ) -> None:
-    """Send a conflict alert through SendGrid's mail API."""
+    """Send a conflict alert through Resend's email API."""
     payload = {
-        "personalizations": [{"to": [{"email": recipient_email}]}],
-        "from": {"email": sender_email},
+        "from": CONFLICT_ALERT_SENDER,
+        "to": [recipient_email],
         "subject": alert.subject,
-        "content": [{"type": "text/plain", "value": alert.body}],
+        "html": escape(alert.body).replace("\n", "<br>"),
     }
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.post(
-            SENDGRID_SEND_URL,
+            RESEND_SEND_URL,
             headers={
-                "Authorization": f"Bearer {sendgrid_api_key}",
+                "Authorization": f"Bearer {resend_api_key}",
                 "Content-Type": "application/json",
             },
             json=payload,
@@ -246,7 +246,7 @@ async def maybe_send_conflict_alert(
     *,
     async_client: AsyncOpenAI,
     chat_model: str,
-    sendgrid_api_key: str | None,
+    resend_api_key: str | None,
     company_id: str,
     company_name: str,
     recipient_email: str,
@@ -278,9 +278,9 @@ async def maybe_send_conflict_alert(
         logger.info("Conflict alert decision: no email needed for company_id=%s", company_id)
         return False
 
-    if not sendgrid_api_key:
+    if not resend_api_key:
         logger.warning(
-            "Conflict alert detected but SENDGRID_API_KEY is not configured: company_id=%s",
+            "Conflict alert detected but RESEND_API_KEY is not configured: company_id=%s",
             company_id,
         )
         return False
@@ -309,8 +309,7 @@ async def maybe_send_conflict_alert(
     )
     email_task = asyncio.create_task(
         send_conflict_alert_email(
-            sendgrid_api_key=sendgrid_api_key,
-            sender_email=CONFLICT_ALERT_SENDER_EMAIL,
+            resend_api_key=resend_api_key,
             recipient_email=recipient_email,
             alert=alert,
         )

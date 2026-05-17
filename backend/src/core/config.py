@@ -76,10 +76,10 @@ class Settings(BaseSettings):
             "model replies. Defaults to Kenya (+254)."
         ),
     )
-    sendgrid_api_key: str | None = Field(
+    resend_api_key: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("SENDGRID_API_KEY"),
-        description="Optional SendGrid API key used for emerging-conflict alert emails.",
+        validation_alias=AliasChoices("RESEND_API_KEY"),
+        description="Optional Resend API key used for emerging-conflict alert emails.",
     )
     twilio_account_sid: str | None = Field(
         default=None,
