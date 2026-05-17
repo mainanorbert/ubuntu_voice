@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 RESEND_SEND_URL = "https://api.resend.com/emails"
 TWILIO_MESSAGES_URL_TEMPLATE = "https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
 PUSHOVER_MESSAGES_URL = "https://api.pushover.net/1/messages.json"
-CONFLICT_ALERT_SENDER = "Ubuntu invoice <onboarding@resend.dev>"
+CONFLICT_ALERT_SENDER = "Ubuntu Voice <onboarding@resend.dev>"
 
 _CONFLICT_KEYWORDS = (
     "war",
