@@ -19,7 +19,7 @@
 - Keep responses grounded in retrieved documents; cite sources when the UI/API surface supports it.
 - Do not present AI output as legal, medical, security, or emergency advice.
 - Minimize personal data collection and avoid storing sensitive conflict-related user details unless explicitly required.
-- Include docstring for for functions or clasess that perform medium to complex functionalities
+- Include docstring for functions or clasess that perform medium to complex functionalities
 - For simple functions include a 1 line comment
 
 ## Review
