@@ -27,7 +27,9 @@
 - Keep diffs scoped to the requested task; do not perform unrelated rebrands or refactors.
 - Show the final diff summary and list verification commands run.
 
-
 ## Logging
 - Log all failed database connections at the `CRITICAL` level.
 - Do not include PII (emails, passwords) in any logs.
+- Do not log raw user prompts, chat transcripts, uploaded documents, or retrieved document excerpts.
+- Include request IDs or correlation IDs in error logs when available, without adding user-identifying details.
+- Use structured log fields for severity, component, and operation so incidents can be traced without exposing sensitive data.

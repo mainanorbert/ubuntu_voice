@@ -1,11 +1,13 @@
 # Ubuntu Voice
 
-Ubuntu Voice is a privacy-first, low-bandwidth RAG platform for community peace support. It helps conflict-affected communities, civil society groups, women, youth, and displaced populations access trusted local information through community-defined AI agents.
+Ubuntu Voice is a privacy-first, low-bandwidth RAG platform for community peace support. It helps conflict-affected communities, civil society groups, women, youth, and displaced populations access trusted local information through community-defined AI agents across web text chat, WhatsApp, SMS/text messaging, and private email workflows.
 
 ## Table of Contents
 
 - [Project Problem](#project-problem)
 - [Project Solution](#project-solution)
+- [App Features](#app-features)
+- [How It Works](#how-it-works)
 - [Tech Stack](#tech-stack)
 - [Folder Structure](#folder-structure)
 - [Installation](#installation)
@@ -21,6 +23,40 @@ Conflict-affected communities across Africa often struggle to access trusted and
 Ubuntu Voice turns curated peacebuilding and civil society knowledge into grounded AI support. Users can choose a community-defined agent, ask questions in a low-bandwidth chat experience, and receive concise answers based on trusted uploaded documents. When the system does not have enough reliable information, it should say so instead of guessing.
 
 The platform is designed to minimize personal data collection, avoid exposing sensitive conflict-related details in logs, and keep AI responses grounded in retrieved sources.
+
+## App Features
+
+- **Community-defined AI agents:** Configure agents for specific communities, regions, languages, audiences, safety scopes, and trusted document collections.
+- **Low-bandwidth web text chat:** Let users ask questions through a lightweight chat interface and receive concise answers grounded in the selected agent's documents.
+- **WhatsApp support:** Receive and answer WhatsApp messages through a secure Twilio webhook, routed to the correct agent by the destination WhatsApp number.
+- **SMS/text notifications:** Send short text-message updates through a secure messaging integration for approved community-support workflows.
+- **Private email messaging:** Send sensitive email messages through Resend while protecting recipient details and message content from logs.
+- **Document-grounded RAG:** Upload curated PDF documents, extract and chunk text, create embeddings, and answer only from trusted retrieved sources.
+- **Language-aware responses:** Support selected-language answers for English, Swahili, French, Arabic, and Portuguese.
+- **Privacy and safety guardrails:** Avoid unnecessary personal data collection, block oversized prompts, audit risky outputs, and return a clear fallback when trusted context is insufficient.
+- **Monitoring and usage tracking:** Track usage, model cost, retrieval quality, and guardrail events without logging raw prompts, transcripts, retrieved excerpts, or sensitive contact details.
+
+## How It Works
+
+### Text Chat
+
+Users select a community-defined agent and preferred language in the web app, then ask a question in the low-bandwidth chat interface. The backend scopes retrieval to that agent's trusted document corpus, builds a concise grounded response, and returns either a sourced answer or a clear fallback when there is not enough trusted information.
+
+### WhatsApp
+
+Community members can message a configured WhatsApp number directly. Twilio sends the inbound message to the Ubuntu Voice webhook, the backend matches the destination number to the correct agent, runs the same tenant-scoped RAG pipeline used by web chat, and replies through WhatsApp without logging Twilio credentials or user phone numbers.
+
+### SMS/Text Messaging
+
+Approved workflows can send short SMS/text notifications through a secure messaging provider. These messages are intended for low-bandwidth outreach and updates, with logging protections that avoid exposing phone numbers, raw message bodies, or sensitive conflict-related details.
+
+### Email
+
+Ubuntu Voice can send private email messages with Resend for approved alert or support workflows. Email delivery is designed to protect recipient details and sensitive message content from logs while keeping communication tied to trusted agent and document workflows.
+
+### Documents and Retrieval
+
+Admins upload curated PDF documents for the correct agent or corpus. The backend stores the file, extracts text, splits it into chunks, creates embeddings, and stores searchable vectors in PostgreSQL with pgvector. During chat or messaging flows, the selected agent only retrieves from its own trusted corpus.
 
 ## Tech Stack
 
