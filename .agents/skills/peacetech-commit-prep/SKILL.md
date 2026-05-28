@@ -25,8 +25,23 @@ Prepare changes for a clean commit using the Ubuntu Voice project rules. Commit 
    - Frontend: `cd frontend && npm run lint`, `npm run typecheck`, and `npm run build`
 5. Run focused checks first for narrow changes; run full checks for multi-file or cross-cutting changes.
 6. Summarize the diff and verification outcome.
-7. Create a concise imperative commit message that reflects the actual diff.
+7. Create a concise imperative commit message that reflects the actual diff and follows the commit message rules below.
 8. Commit only the intended files.
+
+## Commit Message Rules
+
+- Every commit message must start with a lowercase prefix followed by a colon and one space.
+- Use a precise prefix that describes the dominant change:
+  - `add:` for new features, files, routes, models, tests, or capabilities.
+  - `fix:` for bug fixes, regressions, failing behavior, race conditions, or broken tests.
+  - `update:` for documentation, copy, configuration, dependency, or non-behavioral improvements.
+  - `refactor:` for internal restructuring that should not change behavior.
+  - `test:` for test-only changes.
+  - `chore:` for maintenance that does not fit the categories above.
+- The summary after the prefix must be specific, precise, and no longer than 72 characters when practical.
+- Use imperative phrasing after the prefix, for example `add: incident statistics classifier`.
+- Do not use vague messages such as `update: changes`, `fix: bug`, `add: stuff`, or bare prefixes without a specific summary.
+- If a commit spans multiple categories, choose the prefix for the user-visible or highest-risk change.
 
 ## Push Workflow
 
