@@ -33,3 +33,9 @@
 - Do not log raw user prompts, chat transcripts, uploaded documents, or retrieved document excerpts.
 - Include request IDs or correlation IDs in error logs when available, without adding user-identifying details.
 - Use structured log fields for severity, component, and operation so incidents can be traced without exposing sensitive data.
+
+
+- Always use the OpenAI developer documentation MCP
+server if you need to work with the OpenAI API,
+ChatGPT Apps SDK, Codex, or related docs without
+me having to explicitly ask.

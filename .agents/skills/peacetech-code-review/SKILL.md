@@ -1,6 +1,6 @@
 ---
 name: peacetech-code-review
-description: Review Ubuntu Voice backend or frontend changes before a commit, pull request, merge, or handoff. Use for code-review requests, broad diffs, privacy-first PeaceTech checks, RAG safety checks, logging checks, and verification planning in the ubuntu_voice project.
+description: Review Ubuntu Voice backend changes before a commit, pull request, merge, or handoff. Use for code-review requests, broad diffs, privacy-first PeaceTech checks, RAG safety checks, logging checks, and verification planning in the ubuntu_voice project.
 ---
 
 # PeaceTech Code Review
@@ -21,8 +21,6 @@ Review changes in the Ubuntu Voice project with a code-review stance: findings f
 - Verify failed database connections are logged at `CRITICAL` level.
 - Verify logs avoid PII such as emails, passwords, and sensitive conflict-related details.
 - Verify RAG or AI answers stay grounded in retrieved documents and preserve source citations where the UI or API supports citations.
-- Verify AI output is not presented as legal, medical, security, or emergency advice.
-- Verify personal data collection and storage are minimized, especially for displaced populations, women, youth, civil society users, and peacebuilding organizations.
 - Verify medium or complex functions/classes have docstrings; simple functions should have a one-line comment when helpful.
 - Verify backend changes have relevant tests or a clear reason tests were not run.
 - Verify frontend changes have relevant lint, typecheck, build, or focused UI checks when applicable.
