@@ -85,6 +85,9 @@ export default function Page() {
               <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
                 <Link href="/documents">Create agent</Link>
               </Button>
+              <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
+                <Link href="/statistics">Statistics</Link>
+              </Button>
               <UserButton
                 afterSignOutUrl="/"
                 appearance={{

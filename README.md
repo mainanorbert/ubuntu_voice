@@ -33,6 +33,8 @@ The platform is designed to minimize personal data collection, avoid exposing se
 - **Private email messaging:** Send sensitive email messages through Resend while protecting recipient details and message content from logs.
 - **Document-grounded RAG:** Upload curated PDF documents, extract and chunk text, create embeddings, and answer only from trusted retrieved sources.
 - **Language-aware responses:** Support selected-language answers for English, Swahili, French, Arabic, and Portuguese.
+- **Incident statistics classifier:** Run a separate non-blocking classifier agent on incoming reports to detect recordable incident statistics by place and category without slowing chat responses.
+- **Regional statistics dashboard:** Show per-agent incident counts by place, description, category, total count, and last update time.
 - **Privacy and safety guardrails:** Avoid unnecessary personal data collection, block oversized prompts, audit risky outputs, and return a clear fallback when trusted context is insufficient.
 - **Monitoring and usage tracking:** Track usage, model cost, retrieval quality, and guardrail events without logging raw prompts, transcripts, retrieved excerpts, or sensitive contact details.
 
@@ -58,9 +60,15 @@ Ubuntu Voice can send private email messages with Resend for approved alert or s
 
 Admins upload curated PDF documents for the correct agent or corpus. The backend stores the file, extracts text, splits it into chunks, creates embeddings, and stores searchable vectors in PostgreSQL with pgvector. During chat or messaging flows, the selected agent only retrieves from its own trusted corpus.
 
+### Incident Statistics
+
+When a web chat or WhatsApp prompt passes input guardrails, Ubuntu Voice queues a separate background classifier agent. The classifier returns strict JSON only, using the allowed categories `Rights Violations`, `Displacements`, `Casualties`, and `Severe Hunger`. The backend validates the JSON, sanitizes the description, normalizes the place, and upserts a per-agent `incident_statistics` row. Existing `(agent, place, type)` rows increment `total_count` by one report; new combinations start at one.
+
+The statistics view reads only the signed-in user's agent rows and displays a compact regional table at `/statistics`.
+
 ## Tech Stack
 
-- **Backend:** FastAPI, Python 3.12, SQLAlchemy, Pydantic Settings, pgvector, pypdf, tiktoken
+- **Backend:** FastAPI, Python 3.12, SQLAlchemy, Pydantic Settings, pgvector, pypdf, tiktoken, OpenAI Agents SDK
 - **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/radix, Clerk
 - **Database:** PostgreSQL with pgvector
 - **AI services:** OpenAI/OpenRouter-compatible clients
@@ -79,7 +87,7 @@ ubuntu_voice/
 |   |   |-- core/         # Core configuration and shared setup
 |   |   |-- domain/       # Domain models and business rules
 |   |   |-- models/       # Database models
-|   |   |-- services/     # RAG, ingestion, storage, and app services
+|   |   |-- services/     # RAG, ingestion, incident statistics, storage, and app services
 |   |   `-- workers/      # Background or async processing code
 |   |-- storage/          # Local uploaded document storage
 |   |-- tests/            # Backend test suite

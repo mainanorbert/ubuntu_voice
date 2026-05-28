@@ -225,6 +225,9 @@ const DashboardPage = function dashboard_page() {
           <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
             <Link href="/documents">Create agent</Link>
           </Button>
+          <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
+            <Link href="/statistics">Statistics</Link>
+          </Button>
           <ThemeToggle />
           <UserButton afterSignOutUrl="/" />
         </div>

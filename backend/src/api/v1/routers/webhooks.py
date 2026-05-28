@@ -3,7 +3,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from fastapi.responses import PlainTextResponse
 from openai import AsyncOpenAI
 from sqlalchemy.orm import Session
@@ -14,6 +14,7 @@ from src.models import Company, User
 from src.services.conflict_alerts import maybe_send_conflict_alert
 from src.services.cost_monitoring import merge_usage_charges, record_user_spend
 from src.services.guardrails import evaluate_input, evaluate_output, record_guardrail_event
+from src.services.incident_statistics import classify_and_store_incident_statistics
 from src.services.rag_agent import run_rag_agent
 from src.services.whatsapp import (
     WhatsAppConfigurationError,
@@ -39,6 +40,7 @@ async def build_whatsapp_agent_reply(
     db_session: Session,
     company: Company,
     user_message: str,
+    background_tasks: BackgroundTasks,
 ) -> str:
     """Run one WhatsApp message through the matched agent's existing chat pipeline."""
     owner = db_session.get(User, company.owner_id)
@@ -60,6 +62,16 @@ async def build_whatsapp_agent_reply(
             input_token_count=input_check.token_count,
         )
         return input_check.reason or "Please send a shorter, focused message."
+
+    background_tasks.add_task(
+        classify_and_store_incident_statistics,
+        database_url=settings.database_url,
+        openrouter_api_key=settings.openrouter_api_key,
+        openrouter_base_url=settings.openrouter_base_url,
+        chat_model=settings.openrouter_model,
+        company_id=company.id,
+        user_prompt=user_message,
+    )
 
     await maybe_send_conflict_alert(
         async_client=client,
@@ -128,6 +140,7 @@ async def handle_twilio_whatsapp_webhook(
     settings: Annotated[Settings, Depends(get_settings)],
     client: Annotated[AsyncOpenAI, Depends(get_openrouter_client)],
     db_session: Annotated[Session, Depends(get_db_session)],
+    background_tasks: BackgroundTasks,
 ) -> PlainTextResponse:
     """Receive a Twilio WhatsApp message, answer with the matched tenant agent, and acknowledge it."""
     form = await request.form()
@@ -156,6 +169,7 @@ async def handle_twilio_whatsapp_webhook(
             db_session=db_session,
             company=company,
             user_message=inbound.body,
+            background_tasks=background_tasks,
         )
     except Exception as exc:  # noqa: BLE001 - WhatsApp should receive a graceful fallback.
         logger.exception(

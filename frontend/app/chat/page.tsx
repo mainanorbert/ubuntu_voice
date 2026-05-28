@@ -914,6 +914,9 @@ export default function ChatPage() {
           <Button variant="outline" size="sm" className="hidden shrink-0 sm:inline-flex" asChild>
             <Link href="/documents">Create agent</Link>
           </Button>
+          <Button variant="outline" size="sm" className="hidden shrink-0 sm:inline-flex" asChild>
+            <Link href="/statistics">Statistics</Link>
+          </Button>
           <ThemeToggle />
           <UserButton afterSignOutUrl="/" />
         </div>

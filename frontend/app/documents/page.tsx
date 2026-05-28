@@ -632,6 +632,9 @@ export default function DocumentsPage() {
           <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
             <Link href="/chat">Chat</Link>
           </Button>
+          <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
+            <Link href="/statistics">Statistics</Link>
+          </Button>
           <ThemeToggle />
           <UserButton afterSignOutUrl="/" />
         </div>

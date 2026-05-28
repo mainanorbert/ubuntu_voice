@@ -3,7 +3,7 @@
 from typing import Annotated
 
 from clerk_backend_api.security.types import RequestState
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from openai import AsyncOpenAI
 from sqlalchemy.orm import Session
 
@@ -17,6 +17,7 @@ from src.services.guardrails import (
     evaluate_output,
     record_guardrail_event,
 )
+from src.services.incident_statistics import classify_and_store_incident_statistics
 from src.services.ingestion import get_owned_company, upsert_user
 from src.services.conflict_alerts import maybe_send_conflict_alert
 from src.services.rag_agent import run_rag_agent
@@ -31,6 +32,7 @@ async def post_agent_chat(
     settings: Annotated[Settings, Depends(get_settings)],
     client: Annotated[AsyncOpenAI, Depends(get_openrouter_client)],
     db_session: Annotated[Session, Depends(get_db_session)],
+    background_tasks: BackgroundTasks,
 ) -> AgentChatResponse:
     """Run the two-phase RAG agent pipeline for the authenticated owner's company.
 
@@ -68,6 +70,16 @@ async def post_agent_chat(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=input_check.reason,
         )
+
+    background_tasks.add_task(
+        classify_and_store_incident_statistics,
+        database_url=settings.database_url,
+        openrouter_api_key=settings.openrouter_api_key,
+        openrouter_base_url=settings.openrouter_base_url,
+        chat_model=settings.openrouter_model,
+        company_id=company.id,
+        user_prompt=body.message,
+    )
 
     await maybe_send_conflict_alert(
         async_client=client,

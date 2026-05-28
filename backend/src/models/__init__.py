@@ -4,7 +4,20 @@ import uuid
 from decimal import Decimal
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    JSON,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.database import Base
@@ -166,6 +179,45 @@ class GuardrailEvent(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+
+
+class IncidentStatistic(Base):
+    """Aggregated per-agent incident statistics extracted from user reports."""
+
+    __tablename__ = "incident_statistics"
+    __table_args__ = (
+        UniqueConstraint("company_id", "normalized_place", "type", name="uq_incident_stats_company_place_type"),
+        CheckConstraint(
+            "type IN ('Rights Violations', 'Displacements', 'Casualties', 'Severe Hunger')",
+            name="ck_incident_statistics_type",
+        ),
+        Index("ix_incident_statistics_company_id", "company_id"),
+        Index("ix_incident_statistics_normalized_place", "normalized_place"),
+        Index("ix_incident_statistics_updated_at", "updated_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    company_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    place: Mapped[str] = mapped_column(Text, nullable=False)
+    normalized_place: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    type: Mapped[str] = mapped_column(Text, nullable=False)
+    total_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
 

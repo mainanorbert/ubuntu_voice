@@ -21,3 +21,16 @@ class GuardrailEventResponse(BaseModel):
     response_text: str | None = Field(default=None)
     input_token_count: int | None = Field(default=None)
     created_at: datetime
+
+
+class IncidentStatisticResponse(BaseModel):
+    """One aggregated incident-statistics row for dashboard display."""
+
+    id: str
+    company_id: str
+    company_name: str
+    place: str
+    description: str
+    type: str
+    total_count: int
+    updated_at: datetime
