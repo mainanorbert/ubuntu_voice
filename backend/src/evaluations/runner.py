@@ -76,10 +76,10 @@ async def _run_evaluation(*, settings: Settings, run_id: str) -> None:
                 ]
                 facts = build_context_from_chunks(rag.documents)
                 grades = await asyncio.gather(
-                    _safe_grade("correctness", evaluate_correctness(client, settings.evaluation_model, question=item.question, answer=rag.answer, reference_answer=item.reference_answer)),
-                    _safe_grade("relevance", evaluate_relevance(client, settings.evaluation_model, question=item.question, answer=rag.answer)),
-                    _safe_grade("groundedness", evaluate_groundedness(client, settings.evaluation_model, answer=rag.answer, facts=facts)),
-                    _safe_grade("retrieval relevance", evaluate_retrieval_relevance(client, settings.evaluation_model, question=item.question, facts=facts)),
+                    _safe_grade("correctness", evaluate_correctness(client, settings.evaluation_model, question=item.question, answer=rag.answer, reference_answer=item.reference_answer, debug_comparisons=settings.evaluation_debug_comparisons)),
+                    _safe_grade("relevance", evaluate_relevance(client, settings.evaluation_model, question=item.question, answer=rag.answer, debug_comparisons=settings.evaluation_debug_comparisons)),
+                    _safe_grade("groundedness", evaluate_groundedness(client, settings.evaluation_model, question=item.question, answer=rag.answer, facts=facts, debug_comparisons=settings.evaluation_debug_comparisons)),
+                    _safe_grade("retrieval relevance", evaluate_retrieval_relevance(client, settings.evaluation_model, question=item.question, facts=facts, debug_comparisons=settings.evaluation_debug_comparisons)),
                 )
                 fields = ["correctness", "relevance", "groundedness", "retrieval_relevance"]
                 errors: list[str] = []

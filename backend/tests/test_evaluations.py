@@ -8,13 +8,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from src.core.database import Base
-from src.evaluations.graders import evaluate_correctness
+from src.evaluations.graders import evaluate_correctness, evaluate_groundedness, print_evaluator_comparison
 from src.evaluations.service import (
-    CONGO_PEACE_AGENT_ID,
-    STARTER_QUESTIONS,
     create_question,
     replace_latest_run,
-    seed_starter_questions,
 )
 from src.models import Company, EvaluationQuestion, EvaluationRun, User
 
@@ -33,24 +30,6 @@ def add_company(session: Session, *, company_id: str, owner_id: str = "owner_1")
     session.add(company)
     session.commit()
     return company
-
-
-def test_starter_questions_seed_only_for_congo_peace_agent() -> None:
-    """The approved starter dataset is not copied into unrelated agents."""
-    with build_session() as session:
-        add_company(session, company_id=CONGO_PEACE_AGENT_ID)
-        add_company(session, company_id="other-agent", owner_id="owner_2")
-
-        seed_starter_questions(session, company_id=CONGO_PEACE_AGENT_ID)
-        seed_starter_questions(session, company_id="other-agent")
-        session.commit()
-
-        congo_rows = session.query(EvaluationQuestion).filter(
-            EvaluationQuestion.company_id == CONGO_PEACE_AGENT_ID
-        ).all()
-        other_rows = session.query(EvaluationQuestion).filter(EvaluationQuestion.company_id == "other-agent").all()
-        assert len(congo_rows) == len(STARTER_QUESTIONS)
-        assert other_rows == []
 
 
 def test_replacing_latest_run_retains_only_one_run() -> None:
@@ -95,6 +74,44 @@ def test_correctness_evaluator_parses_strict_grade_and_builds_expected_prompt() 
     assert result.explanation == "Matches the reference."
     assert calls[0]["response_format"]["type"] == "json_schema"
     assert "GROUND TRUTH ANSWER" in calls[0]["messages"][1]["content"]
+
+
+def test_evaluator_comparison_printing_is_opt_in(capsys) -> None:
+    """Exact comparison values print only when debug comparisons are enabled."""
+    values = [("QUESTION", "What happened?"), ("GENERATED RESPONSE", "An answer.")]
+    print_evaluator_comparison(criterion="relevance", values=values, enabled=False)
+    assert capsys.readouterr().out == ""
+
+    print_evaluator_comparison(criterion="relevance", values=values, enabled=True)
+    output = capsys.readouterr().out
+    assert "EVALUATION COMPARISON: RELEVANCE" in output
+    assert "What happened?" in output
+    assert "An answer." in output
+
+
+def test_groundedness_debug_comparison_prints_question(capsys) -> None:
+    """Groundedness diagnostics identify the question being evaluated."""
+
+    class FakeCompletions:
+        async def create(self, **_kwargs):
+            message = SimpleNamespace(content='{"explanation":"Supported.","passed":true}')
+            return SimpleNamespace(choices=[SimpleNamespace(message=message)], usage=None)
+
+    client = SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions()))
+    asyncio.run(
+        evaluate_groundedness(
+            client,
+            "openai/gpt-5.4",
+            question="Which facts support this answer?",
+            answer="The generated response.",
+            facts="The retrieved context.",
+            debug_comparisons=True,
+        )
+    )
+
+    output = capsys.readouterr().out
+    assert "--- QUESTION ---" in output
+    assert "Which facts support this answer?" in output
 
 
 def test_evaluation_workspace_is_owner_scoped(tmp_path, monkeypatch) -> None:

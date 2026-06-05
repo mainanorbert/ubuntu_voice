@@ -35,6 +35,17 @@ GROUNDEDNESS_PROMPT = """You grade groundedness. Decide whether the STUDENT ANSW
 RETRIEVAL_RELEVANCE_PROMPT = """You grade retrieval relevance. Decide whether the supplied FACTS contain keywords or semantic meaning relevant to the QUESTION. Some unrelated information is acceptable. Return a concise evidence-based explanation, not hidden chain-of-thought."""
 
 
+def print_evaluator_comparison(*, criterion: str, values: list[tuple[str, str]], enabled: bool) -> None:
+    """Print exact judge inputs only when explicitly enabled for controlled debugging."""
+    if not enabled:
+        return
+    border = "=" * 24
+    print(f"\n{border} EVALUATION COMPARISON: {criterion.upper()} {border}")
+    for label, value in values:
+        print(f"\n--- {label} ---\n{value}")
+    print(f"\n{border} END {criterion.upper()} COMPARISON {border}\n", flush=True)
+
+
 async def run_boolean_grader(
     *,
     client: AsyncOpenAI,
@@ -63,9 +74,20 @@ async def run_boolean_grader(
 
 
 async def evaluate_correctness(
-    client: AsyncOpenAI, model: str, *, question: str, answer: str, reference_answer: str
+    client: AsyncOpenAI,
+    model: str,
+    *,
+    question: str,
+    answer: str,
+    reference_answer: str,
+    debug_comparisons: bool = False,
 ) -> EvaluatorOutcome:
     """Evaluate generated response against its reference answer."""
+    print_evaluator_comparison(
+        criterion="correctness",
+        values=[("QUESTION", question), ("REFERENCE ANSWER", reference_answer), ("GENERATED RESPONSE", answer)],
+        enabled=debug_comparisons,
+    )
     return await run_boolean_grader(
         client=client,
         model=model,
@@ -74,8 +96,15 @@ async def evaluate_correctness(
     )
 
 
-async def evaluate_relevance(client: AsyncOpenAI, model: str, *, question: str, answer: str) -> EvaluatorOutcome:
+async def evaluate_relevance(
+    client: AsyncOpenAI, model: str, *, question: str, answer: str, debug_comparisons: bool = False
+) -> EvaluatorOutcome:
     """Evaluate whether the generated response addresses the input."""
+    print_evaluator_comparison(
+        criterion="relevance",
+        values=[("QUESTION", question), ("GENERATED RESPONSE", answer)],
+        enabled=debug_comparisons,
+    )
     return await run_boolean_grader(
         client=client,
         model=model,
@@ -84,8 +113,25 @@ async def evaluate_relevance(client: AsyncOpenAI, model: str, *, question: str, 
     )
 
 
-async def evaluate_groundedness(client: AsyncOpenAI, model: str, *, answer: str, facts: str) -> EvaluatorOutcome:
+async def evaluate_groundedness(
+    client: AsyncOpenAI,
+    model: str,
+    *,
+    question: str,
+    answer: str,
+    facts: str,
+    debug_comparisons: bool = False,
+) -> EvaluatorOutcome:
     """Evaluate whether the generated response is supported by retrieved facts."""
+    print_evaluator_comparison(
+        criterion="groundedness",
+        values=[
+            ("QUESTION", question),
+            ("RETRIEVED CONTEXT USED FOR RESPONSE", facts or "No facts were retrieved."),
+            ("GENERATED RESPONSE", answer),
+        ],
+        enabled=debug_comparisons,
+    )
     return await run_boolean_grader(
         client=client,
         model=model,
@@ -95,9 +141,14 @@ async def evaluate_groundedness(client: AsyncOpenAI, model: str, *, answer: str,
 
 
 async def evaluate_retrieval_relevance(
-    client: AsyncOpenAI, model: str, *, question: str, facts: str
+    client: AsyncOpenAI, model: str, *, question: str, facts: str, debug_comparisons: bool = False
 ) -> EvaluatorOutcome:
     """Evaluate whether retrieved facts are relevant to the input."""
+    print_evaluator_comparison(
+        criterion="retrieval relevance",
+        values=[("QUESTION", question), ("RETRIEVED CONTEXT", facts or "No facts were retrieved.")],
+        enabled=debug_comparisons,
+    )
     return await run_boolean_grader(
         client=client,
         model=model,

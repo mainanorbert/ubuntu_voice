@@ -22,6 +22,13 @@ class Settings(BaseSettings):
         default="openai/gpt-5.4",
         description="OpenRouter model slug used by independent RAG evaluators",
     )
+    evaluation_debug_comparisons: bool = Field(
+        default=False,
+        description=(
+            "Print exact evaluator comparison inputs to the terminal. Enable only for controlled "
+            "debugging because output includes evaluation answers and retrieved document text."
+        ),
+    )
     embedding_model: str = Field(
         default="openai/text-embedding-3-small",
         description="OpenRouter / OpenAI-compatible embedding model slug",

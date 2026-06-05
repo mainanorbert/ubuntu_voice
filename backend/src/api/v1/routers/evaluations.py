@@ -23,7 +23,6 @@ from src.evaluations.service import (
     delete_question,
     get_latest_run,
     replace_latest_run,
-    seed_starter_questions,
 )
 from src.models import EvaluationQuestion, EvaluationResult, EvaluationRun
 from src.services.ingestion import get_owned_company, upsert_user
@@ -78,10 +77,8 @@ async def get_evaluation_workspace(
     session_state: Annotated[RequestState, Depends(require_clerk_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> EvaluationWorkspaceResponse:
-    """Return an owned agent's dataset and latest run, seeding Congo Peace once."""
+    """Return an owned agent's dataset and latest run."""
     _user, company = get_owned_agent(db_session, session_state, company_id)
-    seed_starter_questions(db_session, company_id=company.id)
-    db_session.commit()
     questions = db_session.query(EvaluationQuestion).filter(
         EvaluationQuestion.company_id == company.id
     ).order_by(EvaluationQuestion.created_at).all()
@@ -130,7 +127,6 @@ async def post_evaluation_run(
 ) -> EvaluationRunResponse:
     """Replace the retained run and launch independent evaluation in the background."""
     _user, company = get_owned_agent(db_session, session_state, company_id)
-    seed_starter_questions(db_session, company_id=company.id)
     run = replace_latest_run(db_session, company_id=company.id)
     db_session.commit()
     db_session.refresh(run)
