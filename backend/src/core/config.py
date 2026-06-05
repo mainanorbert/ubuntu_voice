@@ -18,6 +18,10 @@ class Settings(BaseSettings):
         default="openai/gpt-4.1-mini",
         description="OpenRouter model slug for chat completions",
     )
+    evaluation_model: str = Field(
+        default="openai/gpt-5.4",
+        description="OpenRouter model slug used by independent RAG evaluators",
+    )
     embedding_model: str = Field(
         default="openai/text-embedding-3-small",
         description="OpenRouter / OpenAI-compatible embedding model slug",

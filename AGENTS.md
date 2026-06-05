@@ -39,3 +39,32 @@
 server if you need to work with the OpenAI API,
 ChatGPT Apps SDK, Codex, or related docs without
 me having to explicitly ask.
+
+
+## Repo Map
+- `backend/src/main.py` and `backend/main.py`: FastAPI entrypoints.
+- `backend/src/api/v1/routers/`: API route handlers.
+- `backend/src/api/v1/schemas/`: request/response schemas.
+- `backend/src/core/`: config, auth, database, logging, shared dependencies.
+- `backend/src/services/`: RAG, ingestion, embeddings, storage, WhatsApp, guardrails, monitoring.
+- `backend/alembic/`: database migrations.
+- `backend/tests/`: backend test suite.
+- `frontend/app/`: Next.js routes, pages, and API route proxies.
+- `frontend/components/`: shared React/UI components.
+- `frontend/lib/`: frontend utilities and server helpers.
+- `frontend/public/`: static assets.
+
+
+## Definition Of Done
+- Changes are scoped to the requested task.
+- Relevant backend tests pass: `cd backend && uv run pytest -q`.
+- Relevant frontend checks pass: `cd frontend && npm run lint && npm run typecheck && npm run build`.
+- Privacy checks pass: no raw prompts, transcripts, retrieved excerpts, credentials, phone numbers, emails, or sensitive conflict details are logged.
+- User-facing RAG answers remain grounded in retrieved documents and cite sources where supported.
+- Final handoff includes changed files, verification commands run, and any known risks or skipped checks.
+
+## Extra Guardrails
+- Do not edit unrelated files or perform broad refactors without approval.
+- Do not add new personal data collection unless explicitly required.
+- Do not expose `.env`, `.env.local`, API keys, tokens, phone numbers, or email addresses.
+- Do not log raw user content, uploaded document text, retrieved chunks, or provider payloads.

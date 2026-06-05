@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from dataclasses import dataclass
 
 from agents import Agent, OpenAIChatCompletionsModel, Runner, trace
 from openai import AsyncOpenAI
@@ -37,6 +38,16 @@ from src.services.rag_retrieval import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class RagEvaluationOutput:
+    """Detailed RAG output retained in memory for independent evaluation."""
+
+    answer: str
+    grounded: bool
+    documents: list[dict]
+    usage_charges: list[UsageCharge]
 
 _QUERY_REWRITE_PROMPT = """
 You prepare the user's latest message for a knowledge-base retrieval pipeline.
@@ -192,7 +203,7 @@ async def prepare_retrieval_query(
     return needs_retrieval, query, usage_charge
 
 
-async def run_rag_agent(
+async def run_rag_agent_for_evaluation(
     *,
     async_client: AsyncOpenAI,
     db_session: Session,
@@ -208,8 +219,8 @@ async def run_rag_agent(
     similarity_threshold: float,
     openrouter_api_key: str,
     openrouter_base_url: str,
-) -> tuple[str, bool, list[UsageCharge]]:
-    """Run history-aware query preparation, optional retrieval, and answering."""
+) -> RagEvaluationOutput:
+    """Run the existing RAG pipeline while retaining retrieved chunks in memory."""
     usage_charges: list[UsageCharge] = []
     recent_history = history or []
     logger.info(
@@ -323,4 +334,15 @@ async def run_rag_agent(
         grounded,
         len(reply),
     )
-    return reply, grounded, usage_charges
+    return RagEvaluationOutput(
+        answer=reply,
+        grounded=grounded,
+        documents=chunks if grounded else [],
+        usage_charges=usage_charges,
+    )
+
+
+async def run_rag_agent(**kwargs) -> tuple[str, bool, list[UsageCharge]]:
+    """Run the RAG pipeline using the backward-compatible chat response shape."""
+    output = await run_rag_agent_for_evaluation(**kwargs)
+    return output.answer, output.grounded, output.usage_charges

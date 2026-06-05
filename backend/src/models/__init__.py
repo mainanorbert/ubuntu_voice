@@ -246,3 +246,65 @@ class DocumentChunk(Base):
     embedding: Mapped[list[float]] = mapped_column(EmbeddingVector(EMBEDDING_SCHEMA_DIMENSION), nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+
+
+class EvaluationQuestion(Base):
+    """Owner-managed reference question for evaluating one agent."""
+
+    __tablename__ = "evaluation_questions"
+    __table_args__ = (Index("ix_evaluation_questions_company_id", "company_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    company_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
+    )
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    reference_answer: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class EvaluationRun(Base):
+    """Latest independent RAG evaluation run for one agent."""
+
+    __tablename__ = "evaluation_runs"
+    __table_args__ = (
+        UniqueConstraint("company_id", name="uq_evaluation_runs_company_id"),
+        Index("ix_evaluation_runs_company_id", "company_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    company_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending", server_default="pending")
+    total_questions: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    completed_questions: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class EvaluationResult(Base):
+    """Per-question output and four evaluator outcomes for the latest run."""
+
+    __tablename__ = "evaluation_results"
+    __table_args__ = (Index("ix_evaluation_results_run_id", "run_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    run_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("evaluation_runs.id", ondelete="CASCADE"), nullable=False
+    )
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    reference_answer: Mapped[str] = mapped_column(Text, nullable=False)
+    generated_answer: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    retrieved_sources: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    correctness_passed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    correctness_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    relevance_passed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    relevance_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    groundedness_passed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    groundedness_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retrieval_relevance_passed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    retrieval_relevance_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    operational_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
