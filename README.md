@@ -2,6 +2,11 @@
 
 Ubuntu Voice is a privacy-first, low-bandwidth RAG platform for community peace support. It helps conflict-affected communities, civil society groups, women, youth, and displaced populations access trusted local information through community-defined AI agents across web text chat, WhatsApp, SMS/text messaging, and private email workflows.
 
+## Demo Links
+
+- [Evaluation demo](https://www.awesomescreenshot.com/video/53310423?key=ca040dc0ce523077c0dd6cd103060e76)
+- [Project functional features demo](https://www.awesomescreenshot.com/video/52685415?key=9ffcc28ae89115643f739778fab83759)
+
 ## Table of Contents
 
 - [Project Problem](#project-problem)
@@ -129,7 +134,7 @@ For each question:
 
 ### Sample dataset file
 
-A starter sample is included at the project root in [evaluation_dataset_samples.md](/home/nober/andela-projects/ubuntu_voice/evaluation_dataset_samples.md).
+A starter sample is included at the project root in evaluation_dataset_samples.md
 
 Use it as follows:
 
