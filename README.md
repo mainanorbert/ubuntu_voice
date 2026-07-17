@@ -8,6 +8,8 @@ Ubuntu Voice is a privacy-first, low-bandwidth RAG platform for community peace 
 - [Project Solution](#project-solution)
 - [App Features](#app-features)
 - [How It Works](#how-it-works)
+- [Dashboard And Monitoring](#dashboard-and-monitoring)
+- [Evaluation Workflow](#evaluation-workflow)
 - [Tech Stack](#tech-stack)
 - [Folder Structure](#folder-structure)
 - [Installation](#installation)
@@ -37,6 +39,7 @@ The platform is designed to minimize personal data collection, avoid exposing se
 - **Regional statistics dashboard:** Show per-agent incident counts by place, description, category, total count, and last update time.
 - **Privacy and safety guardrails:** Avoid unnecessary personal data collection, block oversized prompts, audit risky outputs, and return a clear fallback when trusted context is insufficient.
 - **Monitoring and usage tracking:** Track usage, model cost, retrieval quality, and guardrail events without logging raw prompts, transcripts, retrieved excerpts, or sensitive contact details.
+- **Operator dashboard:** A signed-in dashboard gives operators a single workspace for account details, usage monitoring, guardrail review, and independent RAG evaluations.
 
 ## How It Works
 
@@ -65,6 +68,76 @@ Admins upload curated PDF documents for the correct agent or corpus. The backend
 When a web chat or WhatsApp prompt passes input guardrails, Ubuntu Voice queues a separate background classifier agent. The classifier returns strict JSON only, using the allowed categories `Rights Violations`, `Displacements`, `Casualties`, and `Severe Hunger`. The backend validates the JSON, sanitizes the description, normalizes the place, and upserts a per-agent `incident_statistics` row. Existing `(agent, place, type)` rows increment `total_count` by one report; new combinations start at one.
 
 The statistics view reads only the signed-in user's agent rows and displays a compact regional table at `/statistics`.
+
+## Dashboard And Monitoring
+
+Signed-in operators can open `/dashboard` from the home page. The dashboard is the monitoring workspace for account and quality operations.
+
+### Dashboard overview
+
+- **`/dashboard`:** Shows the signed-in operator profile, email, and account creation date.
+- **`/usage`:** Shows cumulative spend, tracked users, request volume, and token totals. The page aggregates prompt tokens, completion tokens, total tokens, request count, and USD cost per user.
+- **`/guardrails`:** Shows recent blocked or monitored safety events with event type, action taken, matched rules, token count, and truncated prompt/response audit metadata.
+- **`/evaluations`:** Lets the operator build a test dataset per agent and run independent RAG evaluations against that dataset.
+
+## Evaluation Workflow
+
+Ubuntu Voice evaluates one agent at a time. Each agent has its own evaluation dataset and latest retained run.
+
+### How evaluation is done
+
+1. Open `/evaluations`.
+2. Select the target agent.
+3. Add test items to that agent's dataset. Each item has:
+   - a **question**
+   - a **reference answer**
+4. Click **Run evaluation**.
+5. The backend runs the same RAG pipeline used by the product for each question, including retrieval against that agent's uploaded documents.
+6. For every question, Ubuntu Voice stores:
+   - the generated answer
+   - the retrieved source file names and similarity scores
+   - pass/fail grades with explanations
+7. The latest run remains visible in the dashboard for review.
+
+### Evaluation criteria
+
+Each result is graded independently across four criteria:
+
+- **Correctness:** Does the generated answer agree with the reference answer?
+- **Relevance:** Does the generated answer directly answer the question?
+- **Groundedness:** Is the generated answer supported by the retrieved document facts, without unsupported claims?
+- **Retrieval relevance:** Did the retrieval step bring back facts that are relevant to the question?
+
+### How users should build evaluation questions
+
+Users create their own evaluation dataset from the knowledge they uploaded for an agent. A good evaluation item is based on information that should already exist in the agent's trusted documents.
+
+For each question:
+
+1. Read the uploaded source documents for that agent.
+2. Write a realistic user question that the agent should be able to answer from those documents.
+3. Write a concise reference answer grounded in the same documents.
+4. Add the pair to the test dataset in `/evaluations`.
+5. Re-run the evaluation after document updates, prompt changes, retrieval tuning, or guardrail changes.
+
+### Dataset limits and operating notes
+
+- Each agent can store up to **50 evaluation questions**.
+- Dataset edits are blocked while an evaluation run is active.
+- The dashboard keeps the **latest retained run** for each agent.
+- Evaluation quality depends on the quality of the uploaded documents and the quality of the reference answers written by the user.
+
+### Sample dataset file
+
+A starter sample is included at the project root in [evaluation_dataset_samples.md](/home/nober/andela-projects/ubuntu_voice/evaluation_dataset_samples.md).
+
+Use it as follows:
+
+1. Review the sample structure.
+2. Copy one sample question and its reference answer into the `/evaluations` dataset form for the matching agent.
+3. Replace placeholder contact details with the exact values from your own verified source documents where needed.
+4. Add more questions that reflect the documents you uploaded for that agent.
+5. Run the evaluation and review which criteria pass or fail.
 
 ## Tech Stack
 
@@ -102,6 +175,7 @@ ubuntu_voice/
 |   `-- package.json      # Frontend scripts and dependencies
 |-- AGENTS.md             # Codex project instructions
 |-- CAPSTONE_SPEC.md      # Product direction and MVP scope
+|-- evaluation_dataset_samples.md  # Example evaluation questions and reference answers
 `-- README.md             # Root project documentation
 ```
 

@@ -83,6 +83,9 @@ export default function Page() {
                 <Link href="/chat">Community chat</Link>
               </Button>
               <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+              <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
                 <Link href="/documents">Create agent</Link>
               </Button>
               <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
