@@ -195,7 +195,15 @@ cd backend
 uv sync
 ```
 
-Create the required backend environment file from your local secret source. Do not commit `.env` values.
+Create the backend environment file from the example at `backend/.env.example`.
+
+From the project root:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Then open `backend/.env`, replace the placeholder values with your real credentials and service URLs, and keep that file out of version control. The example file lives at `backend/.env.example`.
 
 ### Frontend
 
