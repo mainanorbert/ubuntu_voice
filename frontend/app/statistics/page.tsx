@@ -1,7 +1,7 @@
 "use client"
 
 import { UserButton } from "@clerk/nextjs"
-import { ArrowLeft, Loader2, MapPin, RefreshCw, ShieldAlert, Table2 } from "lucide-react"
+import { Home, Loader2, MapPin, RefreshCw, ShieldAlert, Table2 } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
@@ -130,9 +130,10 @@ export default function StatisticsPage() {
     <div className="flex min-h-svh flex-col bg-background">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 px-4 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3">
-          <Button variant="ghost" size="icon-sm" asChild>
-            <Link href="/" aria-label="Back to home">
-              <ArrowLeft />
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/" aria-label="Return to home">
+              <Home className="size-4" />
+              Home
             </Link>
           </Button>
           <div className="min-w-0 flex-1">

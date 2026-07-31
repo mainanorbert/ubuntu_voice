@@ -5,11 +5,11 @@ import Image from "next/image"
 import Link from "next/link"
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react"
 import {
-  ArrowLeft,
   Bot,
   BrainCircuit,
   Building2,
   Globe2,
+  Home,
   Loader2,
   MessageCircle,
   Mic,
@@ -893,9 +893,10 @@ export default function ChatPage() {
 
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 px-4 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3">
-          <Button variant="ghost" size="icon-sm" asChild>
-            <Link href="/" aria-label="Back to home">
-              <ArrowLeft />
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/" aria-label="Return to home">
+              <Home className="size-4" />
+              Home
             </Link>
           </Button>
           <Link href="/" className="flex min-w-0 flex-1 items-center gap-3 transition-opacity hover:opacity-90">

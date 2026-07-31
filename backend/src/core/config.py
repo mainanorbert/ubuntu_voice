@@ -87,10 +87,15 @@ class Settings(BaseSettings):
             "model replies. Defaults to Kenya (+254)."
         ),
     )
-    resend_api_key: str | None = Field(
+    sendgrid_api_key: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("RESEND_API_KEY"),
-        description="Optional Resend API key used for emerging-conflict alert emails.",
+        validation_alias=AliasChoices("SENDGRID_API_KEY"),
+        description="Optional SendGrid API key used for emerging-conflict alert emails.",
+    )
+    sendgrid_from_email: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("SENDGRID_FROM_EMAIL"),
+        description="Verified SendGrid sender address used for emerging-conflict alert emails.",
     )
     twilio_account_sid: str | None = Field(
         default=None,
@@ -106,6 +111,21 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("TWILIO_WHATSAPP_NUMBER"),
         description="Optional Twilio WhatsApp sender, formatted like whatsapp:+15551234567.",
+    )
+    whatsapp_session_secret: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("WHATSAPP_SESSION_SECRET"),
+        description=(
+            "Optional secret used to derive non-reversible WhatsApp participant identifiers. "
+            "Falls back to the Twilio auth token when unset."
+        ),
+    )
+    whatsapp_session_timeout_minutes: int = Field(
+        default=60,
+        ge=1,
+        le=10080,
+        validation_alias=AliasChoices("WHATSAPP_SESSION_TIMEOUT_MINUTES"),
+        description="Minutes of inactivity before a WhatsApp agent selection expires.",
     )
     twilio_sms_from_number: str | None = Field(
         default=None,

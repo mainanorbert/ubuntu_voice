@@ -1,5 +1,6 @@
 """External channel webhooks."""
 
+from datetime import datetime, timezone
 import logging
 from typing import Annotated
 
@@ -19,9 +20,16 @@ from src.services.rag_agent import run_rag_agent
 from src.services.whatsapp import (
     WhatsAppConfigurationError,
     WhatsAppDeliveryError,
+    build_whatsapp_participant_hash,
+    format_whatsapp_agent_menu,
+    get_whatsapp_agent_session,
+    is_whatsapp_menu_command,
+    list_whatsapp_agents,
+    normalize_whatsapp_phone_number,
     parse_twilio_whatsapp_message,
-    resolve_company_by_whatsapp_number,
+    parse_whatsapp_agent_selection,
     send_twilio_whatsapp_reply,
+    upsert_whatsapp_agent_session,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,7 +84,8 @@ async def build_whatsapp_agent_reply(
     await maybe_send_conflict_alert(
         async_client=client,
         chat_model=settings.openrouter_model,
-        resend_api_key=settings.resend_api_key,
+        sendgrid_api_key=settings.sendgrid_api_key,
+        sendgrid_from_email=settings.sendgrid_from_email,
         twilio_account_sid=settings.twilio_account_sid,
         twilio_auth_token=settings.twilio_auth_token,
         twilio_sms_from_number=settings.twilio_sms_from_number,
@@ -142,42 +151,109 @@ async def handle_twilio_whatsapp_webhook(
     db_session: Annotated[Session, Depends(get_db_session)],
     background_tasks: BackgroundTasks,
 ) -> PlainTextResponse:
-    """Receive a Twilio WhatsApp message, answer with the matched tenant agent, and acknowledge it."""
+    """Route a Twilio WhatsApp participant through agent selection and an expiring session."""
     form = await request.form()
     inbound = parse_twilio_whatsapp_message(form)
     if not inbound.body or not inbound.from_number:
         return WHATSAPP_ACK_RESPONSE
 
-    company = resolve_company_by_whatsapp_number(
-        db_session,
-        twilio_to_number=inbound.to_number,
-        fallback_sender_number=settings.twilio_whatsapp_number,
-    )
-    if company is None:
-        logger.warning("Ignoring WhatsApp webhook because no unique agent matched the inbound recipient number.")
-        return WHATSAPP_ACK_RESPONSE
-
     sender_number = inbound.to_number or settings.twilio_whatsapp_number
-    if sender_number is None:
-        logger.warning("Ignoring WhatsApp webhook because no Twilio sender number was available.")
+    recipient_number = normalize_whatsapp_phone_number(sender_number)
+    configured_recipient_number = normalize_whatsapp_phone_number(settings.twilio_whatsapp_number)
+    session_secret = settings.whatsapp_session_secret or settings.twilio_auth_token
+    if (
+        sender_number is None
+        or recipient_number is None
+        or configured_recipient_number is None
+        or recipient_number != configured_recipient_number
+        or session_secret is None
+    ):
+        logger.warning("Ignoring WhatsApp webhook because session routing is not configured.")
         return WHATSAPP_ACK_RESPONSE
 
     try:
-        reply = await build_whatsapp_agent_reply(
-            settings=settings,
-            client=client,
-            db_session=db_session,
-            company=company,
-            user_message=inbound.body,
-            background_tasks=background_tasks,
+        participant_hash = build_whatsapp_participant_hash(
+            phone_number=inbound.from_number,
+            secret=session_secret,
         )
-    except Exception as exc:  # noqa: BLE001 - WhatsApp should receive a graceful fallback.
-        logger.exception(
-            "WhatsApp agent reply failed: company_id=%s error=%s",
-            company.id,
-            exc.__class__.__name__,
+    except WhatsAppConfigurationError:
+        logger.warning("Ignoring WhatsApp webhook because the participant identifier was invalid.")
+        return WHATSAPP_ACK_RESPONSE
+
+    whatsapp_session = get_whatsapp_agent_session(
+        db_session,
+        recipient_number=recipient_number,
+        participant_hash=participant_hash,
+        timeout_minutes=settings.whatsapp_session_timeout_minutes,
+    )
+
+    company: Company | None = None
+    if whatsapp_session is None:
+        companies = list_whatsapp_agents(db_session)
+        upsert_whatsapp_agent_session(
+            db_session,
+            recipient_number=recipient_number,
+            participant_hash=participant_hash,
+            company_id=None,
         )
-        reply = WHATSAPP_FALLBACK_REPLY
+        db_session.commit()
+        reply = format_whatsapp_agent_menu(companies)
+    elif whatsapp_session.company_id is None:
+        companies = list_whatsapp_agents(db_session)
+        selected_company = parse_whatsapp_agent_selection(inbound.body, companies)
+        if selected_company is None:
+            reply = format_whatsapp_agent_menu(
+                companies,
+                invalid_selection=inbound.body.strip().isdigit(),
+            )
+            db_session.commit()
+        else:
+            upsert_whatsapp_agent_session(
+                db_session,
+                recipient_number=recipient_number,
+                participant_hash=participant_hash,
+                company_id=selected_company.id,
+            )
+            db_session.commit()
+            reply = (
+                f"You are now chatting with {selected_company.name}. "
+                "Send your question, or reply MENU to choose another agent."
+            )
+    elif is_whatsapp_menu_command(inbound.body):
+        companies = list_whatsapp_agents(db_session)
+        whatsapp_session.company_id = None
+        whatsapp_session.last_activity_at = datetime.now(timezone.utc)
+        db_session.commit()
+        reply = format_whatsapp_agent_menu(companies)
+    else:
+        company = db_session.get(Company, whatsapp_session.company_id)
+        if company is None:
+            companies = list_whatsapp_agents(db_session)
+            whatsapp_session.company_id = None
+            whatsapp_session.last_activity_at = datetime.now(timezone.utc)
+            db_session.commit()
+            reply = format_whatsapp_agent_menu(companies)
+        else:
+            whatsapp_session.last_activity_at = datetime.now(timezone.utc)
+            db_session.commit()
+
+    if company is not None:
+        try:
+            reply = await build_whatsapp_agent_reply(
+                settings=settings,
+                client=client,
+                db_session=db_session,
+                company=company,
+                user_message=inbound.body,
+                background_tasks=background_tasks,
+            )
+        except Exception as exc:  # noqa: BLE001 - WhatsApp should receive a graceful fallback.
+            logger.exception(
+                "WhatsApp agent reply failed: company_id=%s error=%s",
+                company.id,
+                exc.__class__.__name__,
+            )
+            reply = WHATSAPP_FALLBACK_REPLY
 
     try:
         await send_twilio_whatsapp_reply(
@@ -189,7 +265,7 @@ async def handle_twilio_whatsapp_webhook(
     except (WhatsAppConfigurationError, WhatsAppDeliveryError) as exc:
         logger.warning(
             "WhatsApp reply delivery failed: company_id=%s error=%s",
-            company.id,
+            company.id if company is not None else None,
             exc.__class__.__name__,
         )
 
