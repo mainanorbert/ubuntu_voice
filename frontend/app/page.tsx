@@ -15,6 +15,7 @@ import {
 import type { LucideIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { MobileNav } from "@/components/mobile-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
 
@@ -59,7 +60,7 @@ export default async function Page() {
         aria-hidden
       />
 
-      <header className="relative z-10 border-b border-border/60 bg-background/82 backdrop-blur-md">
+      <header className="relative z-50 border-b border-border/60 bg-background/82 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-90">
             <Image
@@ -76,9 +77,10 @@ export default async function Page() {
           </Link>
           <nav className="flex shrink-0 items-center gap-1 sm:gap-2">
             <ThemeToggle />
+            <MobileNav is_signed_in={is_signed_in} />
             {!is_signed_in ? (
               <>
-                <Button size="sm" variant="outline" asChild>
+                <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
                   <Link href="/login">Sign in</Link>
                 </Button>
                 <Button size="sm" className="hidden sm:inline-flex" asChild>
@@ -99,7 +101,7 @@ export default async function Page() {
               <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
                 <Link href="/statistics">Statistics</Link>
               </Button>
-              <Button size="sm" variant="outline" asChild>
+              <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
                 <Link href="/logout">Logout</Link>
               </Button>
               </>
