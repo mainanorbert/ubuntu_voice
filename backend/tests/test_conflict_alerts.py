@@ -2,6 +2,8 @@
 
 import asyncio
 
+from sendgrid.helpers.mail import Mail
+
 from src.services import conflict_alerts
 from src.services.conflict_alerts import (
     ConflictAlert,
@@ -56,50 +58,46 @@ def test_redact_personal_contact_details_preserves_location_context() -> None:
     assert redacted == "War is about to break out near City X market."
 
 
-def test_send_conflict_alert_email_uses_resend_payload(monkeypatch) -> None:
-    """Resend receives the configured sender, company email, and HTML body."""
+def test_send_conflict_alert_email_uses_sendgrid_message(monkeypatch) -> None:
+    """SendGrid receives the configured sender, company email, and HTML body."""
     calls: list[dict] = []
 
     class FakeResponse:
-        """Minimal HTTP response stub for successful Resend delivery."""
+        """Minimal SendGrid response stub for successful delivery."""
 
-        def raise_for_status(self) -> None:
-            """Pretend the Resend request succeeded."""
+        status_code = 202
 
-    class FakeAsyncClient:
-        """Capture outbound Resend requests without making network calls."""
+    class FakeSendGridClient:
+        """Capture outbound SendGrid requests without making network calls."""
 
-        def __init__(self, *, timeout: float) -> None:
-            self.timeout = timeout
+        def __init__(self, api_key: str) -> None:
+            calls.append({"api_key": api_key})
 
-        async def __aenter__(self) -> "FakeAsyncClient":
-            return self
-
-        async def __aexit__(self, *_args) -> None:
-            return None
-
-        async def post(self, url: str, **kwargs) -> FakeResponse:
-            calls.append({"url": url, **kwargs})
+        def send(self, message: Mail) -> FakeResponse:
+            calls[0]["message"] = message.get()
             return FakeResponse()
 
-    monkeypatch.setattr(conflict_alerts.httpx, "AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr(conflict_alerts, "SendGridAPIClient", FakeSendGridClient)
+
+    async def run_in_place(callback):
+        return callback()
+
+    monkeypatch.setattr(conflict_alerts.asyncio, "to_thread", run_in_place)
 
     asyncio.run(
         send_conflict_alert_email(
-            resend_api_key="test-key",
+            sendgrid_api_key="test-key",
+            sender_email="alerts@example.org",
             recipient_email="agent-contact@example.org",
             alert=ConflictAlert(subject="Urgent report", body="Line one\nLine two"),
         )
     )
 
-    assert calls[0]["url"] == "https://api.resend.com/emails"
-    assert calls[0]["headers"]["Authorization"] == "Bearer test-key"
-    assert calls[0]["json"] == {
-        "from": "Ubuntu invoice <onboarding@resend.dev>",
-        "to": ["agent-contact@example.org"],
-        "subject": "Urgent report",
-        "html": "Line one<br>Line two",
-    }
+    assert calls[0]["api_key"] == "test-key"
+    assert calls[0]["message"]["from"] == {"email": "alerts@example.org"}
+    assert calls[0]["message"]["personalizations"][0]["to"] == [{"email": "agent-contact@example.org"}]
+    assert calls[0]["message"]["subject"] == "Urgent report"
+    assert calls[0]["message"]["content"] == [{"type": "text/html", "value": "Line one<br>Line two"}]
 
 
 def test_maybe_send_conflict_alert_uses_dynamic_email_fields(monkeypatch) -> None:
@@ -136,7 +134,8 @@ def test_maybe_send_conflict_alert_uses_dynamic_email_fields(monkeypatch) -> Non
         maybe_send_conflict_alert(
             async_client=object(),
             chat_model="openai/gpt-4o-mini",
-            resend_api_key="test-key",
+            sendgrid_api_key="test-key",
+            sendgrid_from_email="alerts@example.org",
             twilio_account_sid="AC123",
             twilio_auth_token="token",
             twilio_sms_from_number="+19015997398",
@@ -152,7 +151,8 @@ def test_maybe_send_conflict_alert_uses_dynamic_email_fields(monkeypatch) -> Non
     )
 
     assert sent is True
-    assert email_calls[0]["resend_api_key"] == "test-key"
+    assert email_calls[0]["sendgrid_api_key"] == "test-key"
+    assert email_calls[0]["sender_email"] == "alerts@example.org"
     assert email_calls[0]["recipient_email"] == "agent-contact@example.org"
     assert email_calls[0]["alert"].subject == "Urgent report for DRC Women Peacebuilders"
     assert "Agent: DRC Women Peacebuilders" in email_calls[0]["alert"].body
@@ -185,7 +185,8 @@ def test_maybe_send_conflict_alert_skips_when_decision_agent_says_false(monkeypa
         maybe_send_conflict_alert(
             async_client=object(),
             chat_model="openai/gpt-4o-mini",
-            resend_api_key="test-key",
+            sendgrid_api_key="test-key",
+            sendgrid_from_email="alerts@example.org",
             company_id="company_123",
             company_name="DRC Women Peacebuilders",
             recipient_email="agent-contact@example.org",

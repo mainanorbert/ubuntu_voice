@@ -37,7 +37,7 @@ The platform is designed to minimize personal data collection, avoid exposing se
 - **Low-bandwidth web text chat:** Let users ask questions through a lightweight chat interface and receive concise answers grounded in the selected agent's documents.
 - **WhatsApp support:** Receive and answer WhatsApp messages through a secure Twilio webhook, routed to the correct agent by the destination WhatsApp number.
 - **SMS/text notifications:** Send short text-message updates through a secure messaging integration for approved community-support workflows.
-- **Private email messaging:** Send sensitive email messages through Resend while protecting recipient details and message content from logs.
+- **Private email messaging:** Send sensitive email messages through SendGrid while protecting recipient details and message content from logs.
 - **Document-grounded RAG:** Upload curated PDF documents, extract and chunk text, create embeddings, and answer only from trusted retrieved sources.
 - **Language-aware responses:** Support selected-language answers for English, Swahili, French, Arabic, and Portuguese.
 - **Incident statistics classifier:** Run a separate non-blocking classifier agent on incoming reports to detect recordable incident statistics by place and category without slowing chat responses.
@@ -62,7 +62,7 @@ Approved workflows can send short SMS/text notifications through a secure messag
 
 ### Email
 
-Ubuntu Voice can send private email messages with Resend for approved alert or support workflows. Email delivery is designed to protect recipient details and sensitive message content from logs while keeping communication tied to trusted agent and document workflows.
+Ubuntu Voice can send private email messages with SendGrid for approved alert or support workflows. Email delivery is designed to protect recipient details and sensitive message content from logs while keeping communication tied to trusted agent and document workflows.
 
 ### Documents and Retrieval
 

@@ -84,7 +84,8 @@ async def post_agent_chat(
     await maybe_send_conflict_alert(
         async_client=client,
         chat_model=settings.openrouter_model,
-        resend_api_key=settings.resend_api_key,
+        sendgrid_api_key=settings.sendgrid_api_key,
+        sendgrid_from_email=settings.sendgrid_from_email,
         twilio_account_sid=settings.twilio_account_sid,
         twilio_auth_token=settings.twilio_auth_token,
         twilio_sms_from_number=settings.twilio_sms_from_number,

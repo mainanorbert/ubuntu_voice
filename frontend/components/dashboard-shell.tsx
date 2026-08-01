@@ -28,20 +28,17 @@ type DashboardShellProps = {
  */
 export function DashboardShell({ children, title, description }: DashboardShellProps) {
   const pathname = usePathname()
-  const show_home_back_link = pathname === "/dashboard"
 
   return (
     <div className="min-h-svh bg-background">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/90 px-4 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3">
-          {show_home_back_link ? (
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/">
-                <ArrowLeft className="size-4" />
-                Home
-              </Link>
-            </Button>
-          ) : null}
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/">
+              <ArrowLeft className="size-4" />
+              Home
+            </Link>
+          </Button>
           <Link href="/dashboard" className="font-semibold text-foreground">
             Ubuntu Voice
           </Link>

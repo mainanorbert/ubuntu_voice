@@ -4,7 +4,6 @@ import { UserButton } from "@clerk/nextjs"
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
-  ArrowLeft,
   BrainCircuit,
   CheckCircle2,
   ChevronDown,
@@ -16,6 +15,7 @@ import {
   FileText,
   FileUp,
   FolderOpen,
+  Home,
   Loader2,
   Pencil,
   Plus,
@@ -623,8 +623,11 @@ export default function DocumentsPage() {
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 px-4 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3">
-          <Button variant="ghost" size="icon-sm" asChild>
-            <Link href="/" aria-label="Back to home"><ArrowLeft /></Link>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/" aria-label="Return to home">
+              <Home className="size-4" />
+              Home
+            </Link>
           </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-sm font-semibold text-foreground">Agent knowledge</h1>

@@ -69,6 +69,39 @@ class Company(Base):
     )
 
 
+class WhatsAppAgentSession(Base):
+    """Persist the agent selected by a WhatsApp participant for one recipient number."""
+
+    __tablename__ = "whatsapp_agent_sessions"
+    __table_args__ = (
+        UniqueConstraint(
+            "recipient_number",
+            "participant_hash",
+            name="uq_whatsapp_sessions_recipient_participant",
+        ),
+        Index("ix_whatsapp_agent_sessions_company_id", "company_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    recipient_number: Mapped[str] = mapped_column(Text, nullable=False)
+    participant_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    company_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    last_activity_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
 class UserSpend(Base):
     """Cumulative spend and token usage totals for a single authenticated user."""
 
