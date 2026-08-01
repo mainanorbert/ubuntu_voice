@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { get_backend_base_url } from "@/lib/backend_base_url"
-import { resolve_clerk_bearer_for_backend } from "@/lib/server/resolve_clerk_bearer_for_backend"
+import { resolve_auth_bearer_for_backend } from "@/lib/server/resolve_auth_bearer_for_backend"
 
 type RouteContext = {
   params: Promise<{ companyId: string }>
@@ -11,7 +11,7 @@ type RouteContext = {
  * Proxies PATCH /api/ingestion/companies/:id to update editable agent metadata.
  */
 export async function PATCH(request: NextRequest, context: RouteContext): Promise<NextResponse> {
-  const auth_result = await resolve_clerk_bearer_for_backend()
+  const auth_result = await resolve_auth_bearer_for_backend()
   if (!auth_result.ok) {
     return auth_result.response
   }

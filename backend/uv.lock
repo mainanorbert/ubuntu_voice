@@ -67,7 +67,6 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
-    { name = "clerk-backend-api" },
     { name = "email-validator" },
     { name = "fastapi", extra = ["standard"] },
     { name = "httpx" },
@@ -93,7 +92,6 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "anyio", marker = "extra == 'dev'", specifier = ">=4.13.0" },
-    { name = "clerk-backend-api", specifier = ">=5.0.6" },
     { name = "email-validator", specifier = ">=2.2.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.136.0" },
     { name = "httpx", specifier = ">=0.28.1" },
@@ -248,22 +246,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7a/1d/29d32e0fb40864b1f878c7f5a0b343ae676c6e2b271a2d55cc3a152391da/charset_normalizer-3.4.7-cp314-cp314t-win_amd64.whl", hash = "sha256:03853ed82eeebbce3c2abfdbc98c96dc205f32a79627688ac9a27370ea61a49c", size = 174168, upload-time = "2026-04-02T09:27:49.795Z" },
     { url = "https://files.pythonhosted.org/packages/de/32/d92444ad05c7a6e41fb2036749777c163baf7a0301a040cb672d6b2b1ae9/charset_normalizer-3.4.7-cp314-cp314t-win_arm64.whl", hash = "sha256:c35abb8bfff0185efac5878da64c45dafd2b37fb0383add1be155a763c1f083d", size = 153018, upload-time = "2026-04-02T09:27:51.116Z" },
     { url = "https://files.pythonhosted.org/packages/db/8f/61959034484a4a7c527811f4721e75d02d653a35afb0b6054474d8185d4c/charset_normalizer-3.4.7-py3-none-any.whl", hash = "sha256:3dce51d0f5e7951f8bb4900c257dad282f49190fdbebecd4ba99bcc41fef404d", size = 61958, upload-time = "2026-04-02T09:28:37.794Z" },
-]
-
-[[package]]
-name = "clerk-backend-api"
-version = "5.0.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cryptography" },
-    { name = "httpcore" },
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "pyjwt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f9/b1/4f95b043e8b975f56bd9e72b47fa6385ade437641887bc7a2745fc7f33fc/clerk_backend_api-5.0.6.tar.gz", hash = "sha256:d83ee7ced1638e2aa1f45eff7de1af43d3e33a4dfd3855ba5234326a145210b3", size = 249640, upload-time = "2026-03-19T16:32:21.418Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/23/841e26e067b6fb1d3f4aef4e60b6f5c64317accadddfbf01a87aa7238015/clerk_backend_api-5.0.6-py3-none-any.whl", hash = "sha256:4eb7801ae7537b3e0e81d9aa633cee7a0a63edfa2b4e9cebede45f0dd7815162", size = 523306, upload-time = "2026-03-19T16:32:20.072Z" },
 ]
 
 [[package]]

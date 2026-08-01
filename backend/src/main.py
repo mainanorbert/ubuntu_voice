@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from src.api.v1.routers import agents, companies, evaluations, monitoring, users, webhooks
+from src.api.v1.routers import agents, auth, companies, evaluations, monitoring, users, webhooks
 from src.core.config import Settings
 from src.core.database import Base
 from src.core.dependencies import get_database_engine, get_settings
@@ -50,6 +50,7 @@ def maybe_install_cors_middleware(*, app: FastAPI, settings: Settings) -> None:
 app = FastAPI(title="Customer Support SaaS", version="0.1.0", lifespan=lifespan)
 maybe_install_cors_middleware(app=app, settings=get_settings())
 app.include_router(agents.router, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(companies.router, prefix="/api/v1")
 app.include_router(monitoring.router, prefix="/api/v1")

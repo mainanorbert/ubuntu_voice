@@ -34,12 +34,16 @@ EMBEDDING_SCHEMA_DIMENSION = 1536
 
 
 class User(Base):
-    """Locally cached Clerk user identity used by relational data."""
+    """Locally stored user identity for manual and Google authentication."""
 
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     email: Mapped[str | None] = mapped_column(Text, nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    google_sub: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True)
+    name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

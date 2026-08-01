@@ -1,5 +1,6 @@
-import { auth } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
+
+import { resolve_auth_bearer_for_backend } from "@/lib/server/resolve_auth_bearer_for_backend"
 
 const SUPPORTED_LANGUAGES = ["English", "Swahili", "French", "Arabic", "Portuguese"] as const
 type ChatLanguage = (typeof SUPPORTED_LANGUAGES)[number]
@@ -53,14 +54,8 @@ function parse_chat_body(
  * stays same-origin and avoids CORS to the Python API server.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const { userId, getToken } = await auth()
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-  const session_token = await getToken()
-  if (!session_token) {
-    return NextResponse.json({ error: "Missing Clerk session token" }, { status: 401 })
-  }
+  const auth_result = await resolve_auth_bearer_for_backend()
+  if (!auth_result.ok) return auth_result.response
 
   let raw: unknown
   try {
@@ -87,7 +82,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${session_token}`,
+        Authorization: `Bearer ${auth_result.token}`,
       },
       body: JSON.stringify({
         company_id: parsed.company_id,

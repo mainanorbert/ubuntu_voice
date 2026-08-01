@@ -1,6 +1,5 @@
 "use client"
 
-import { UserButton } from "@clerk/nextjs"
 import { Home, Loader2, MapPin, RefreshCw, ShieldAlert, Table2 } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -149,7 +148,9 @@ export default function StatisticsPage() {
             <Link href="/dashboard">Dashboard</Link>
           </Button>
           <ThemeToggle />
-          <UserButton afterSignOutUrl="/" />
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/logout">Logout</Link>
+          </Button>
         </div>
       </header>
 

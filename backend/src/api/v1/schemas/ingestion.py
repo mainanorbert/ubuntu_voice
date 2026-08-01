@@ -19,7 +19,7 @@ def normalize_phone_number(value: str) -> str:
 
 
 class RegisteredUserResponse(BaseModel):
-    """Response payload after syncing the authenticated Clerk user locally."""
+    """Response payload after syncing the authenticated user locally."""
 
     id: str = Field(..., examples=["user_2zExample123"])
     email: str | None = Field(default=None, examples=["owner@example.com"])

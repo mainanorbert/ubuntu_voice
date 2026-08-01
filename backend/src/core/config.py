@@ -158,10 +158,26 @@ class Settings(BaseSettings):
             "and unrelated noise sits below 0.15. Tune via RAG_SIMILARITY_THRESHOLD in .env."
         ),
     )
-    clerk_secret_key: str = Field(..., description="Clerk secret key for verifying session JWTs")
-    clerk_authorized_parties: str = Field(
-        default="https://css-f-brown.vercel.app,http://localhost:3000",
-        description="Comma-separated frontend origins allowed in Clerk session tokens (azp)",
+    auth_session_secret: str = Field(
+        default="dev-auth-session-secret-change-me",
+        validation_alias=AliasChoices("AUTH_SESSION_SECRET"),
+        description="Secret used to sign first-party auth session tokens. Override in production.",
+    )
+    auth_session_expiry_seconds: int = Field(
+        default=60 * 60 * 24 * 7,
+        ge=300,
+        validation_alias=AliasChoices("AUTH_SESSION_EXPIRY_SECONDS"),
+        description="Lifetime, in seconds, for first-party bearer session tokens.",
+    )
+    google_client_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GOOGLE_CLIENT_ID"),
+        description="Google OAuth web client ID.",
+    )
+    google_client_secrete: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRETE"),
+        description="Google OAuth web client secret.",
     )
     database_url: str = Field(
         validation_alias=AliasChoices("EIVEN_SERVICE_URL", "DATABASE_URL"),

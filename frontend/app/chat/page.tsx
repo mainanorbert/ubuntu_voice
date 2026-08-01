@@ -1,6 +1,5 @@
 "use client"
 
-import { UserButton } from "@clerk/nextjs"
 import Image from "next/image"
 import Link from "next/link"
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react"
@@ -919,7 +918,9 @@ export default function ChatPage() {
             <Link href="/statistics">Statistics</Link>
           </Button>
           <ThemeToggle />
-          <UserButton afterSignOutUrl="/" />
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/logout">Logout</Link>
+          </Button>
         </div>
       </header>
 

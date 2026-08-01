@@ -2,12 +2,11 @@
 
 from typing import Annotated
 
-from clerk_backend_api.security.types import RequestState
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from src.api.v1.schemas.monitoring import GuardrailEventResponse, IncidentStatisticResponse
-from src.core.clerk_auth import get_authenticated_user_identity, require_clerk_session
+from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
 from src.core.dependencies import get_db_session
 from src.models import Company, GuardrailEvent, IncidentStatistic
 from src.services.ingestion import upsert_user
@@ -52,13 +51,13 @@ def build_incident_statistic_response(row: IncidentStatistic, company_name: str)
 
 @router.get("/guardrail-events", response_model=list[GuardrailEventResponse])
 async def list_guardrail_events(
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> list[GuardrailEventResponse]:
     """Return the most recent guardrail audit rows in reverse chronological order.
 
-    The signed-in user is upserted into the local users table (mirroring the
+    The signed-in user is upserted into the local users table (matching the
     other routes) so dashboard access works for newly authenticated operators.
     Rows are returned newest-first; ``limit`` caps the page size to keep the
     payload small for the dashboard.
@@ -78,7 +77,7 @@ async def list_guardrail_events(
 
 @router.get("/incident-statistics", response_model=list[IncidentStatisticResponse])
 async def list_incident_statistics(
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
     limit: Annotated[int, Query(ge=1, le=500)] = 200,
 ) -> list[IncidentStatisticResponse]:

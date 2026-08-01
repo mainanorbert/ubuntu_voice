@@ -1,14 +1,13 @@
-"""Routes for syncing authenticated Clerk users into local persistence."""
+"""Routes for syncing authenticated users into local persistence."""
 
 from typing import Annotated
 
-from clerk_backend_api.security.types import RequestState
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.api.v1.schemas.ingestion import RegisteredUserResponse
 from src.api.v1.schemas.usage import UserSpendResponse
-from src.core.clerk_auth import get_authenticated_user_identity, require_clerk_session
+from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
 from src.core.dependencies import get_db_session
 from src.services.cost_monitoring import ensure_user_spend_row, list_user_spend_rows
 from src.services.ingestion import upsert_user
@@ -32,10 +31,10 @@ def build_user_spend_response(row) -> UserSpendResponse:
 
 @router.post("/register", response_model=RegisteredUserResponse, status_code=status.HTTP_201_CREATED)
 async def post_user_register(
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> RegisteredUserResponse:
-    """Create the local user row for the signed-in Clerk user if it does not exist yet."""
+    """Create the local user row for the signed-in user if it does not exist yet."""
     identity = get_authenticated_user_identity(session_state)
     user, created = upsert_user(db_session, user_id=identity.user_id, email=identity.email)
     ensure_user_spend_row(db_session, user_id=user.id, email=user.email)
@@ -51,7 +50,7 @@ async def post_user_register(
 
 @router.get("/costs", response_model=list[UserSpendResponse])
 async def get_user_costs(
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> list[UserSpendResponse]:
     """Return the current cumulative spend totals for all tracked users."""

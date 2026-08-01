@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server"
 
 import { get_backend_base_url } from "@/lib/backend_base_url"
-import { resolve_clerk_bearer_for_backend } from "@/lib/server/resolve_clerk_bearer_for_backend"
+import { resolve_auth_bearer_for_backend } from "@/lib/server/resolve_auth_bearer_for_backend"
 
 /**
  * Proxies GET /api/monitoring/guardrail-events to the FastAPI monitoring
  * endpoint so the dashboard can render recent guardrail audit rows.
  */
 export async function GET(request: Request): Promise<NextResponse> {
-  const auth_result = await resolve_clerk_bearer_for_backend()
+  const auth_result = await resolve_auth_bearer_for_backend()
   if (!auth_result.ok) {
     return auth_result.response
   }

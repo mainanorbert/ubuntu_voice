@@ -2,7 +2,6 @@
 
 from typing import Annotated
 
-from clerk_backend_api.security.types import RequestState
 from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
 from sqlalchemy.orm import Session
 
@@ -14,7 +13,7 @@ from src.api.v1.schemas.evaluation import (
     EvaluationWorkspaceResponse,
     RetrievedSourceResponse,
 )
-from src.core.clerk_auth import get_authenticated_user_identity, require_clerk_session
+from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
 from src.core.config import Settings
 from src.core.dependencies import get_db_session, get_settings
 from src.evaluations.runner import run_evaluation_background
@@ -63,7 +62,7 @@ def build_run_response(session: Session, run: EvaluationRun | None) -> Evaluatio
     )
 
 
-def get_owned_agent(session: Session, session_state: RequestState, company_id: str):
+def get_owned_agent(session: Session, session_state: UserIdentity, company_id: str):
     """Resolve the authenticated owner and selected agent."""
     identity = get_authenticated_user_identity(session_state)
     user, _created = upsert_user(session, user_id=identity.user_id, email=identity.email)
@@ -74,7 +73,7 @@ def get_owned_agent(session: Session, session_state: RequestState, company_id: s
 @router.get("/{company_id}", response_model=EvaluationWorkspaceResponse)
 async def get_evaluation_workspace(
     company_id: str,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> EvaluationWorkspaceResponse:
     """Return an owned agent's dataset and latest run."""
@@ -92,7 +91,7 @@ async def get_evaluation_workspace(
 async def post_evaluation_question(
     company_id: str,
     body: EvaluationQuestionCreate,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> EvaluationQuestionResponse:
     """Add one test item to an owned agent's dataset."""
@@ -107,7 +106,7 @@ async def post_evaluation_question(
 async def remove_evaluation_question(
     company_id: str,
     question_id: str,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> Response:
     """Remove one test item from an owned agent's dataset."""
@@ -120,7 +119,7 @@ async def remove_evaluation_question(
 @router.post("/{company_id}/runs", response_model=EvaluationRunResponse, status_code=status.HTTP_202_ACCEPTED)
 async def post_evaluation_run(
     company_id: str,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
     background_tasks: BackgroundTasks,

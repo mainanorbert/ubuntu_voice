@@ -216,6 +216,16 @@ npm ci
 
 Create the required frontend environment file from your local secret source. Do not commit `.env.local` values.
 
+For local Google sign-in, add the OAuth web client ID to `frontend/.env.local`:
+
+```text
+GOOGLE_CLIENT_ID=your_google_oauth_web_client_id.apps.googleusercontent.com
+```
+
+Add the matching `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `backend/.env`. In Google Cloud, register
+`http://localhost:3000/api/auth/google/callback` as an authorized redirect URI. Restart both development servers
+after changing environment variables.
+
 ## Running the App
 
 ### Backend Development Server
