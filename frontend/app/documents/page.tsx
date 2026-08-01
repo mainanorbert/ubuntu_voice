@@ -1,6 +1,5 @@
 "use client"
 
-import { UserButton } from "@clerk/nextjs"
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
@@ -639,7 +638,9 @@ export default function DocumentsPage() {
             <Link href="/statistics">Statistics</Link>
           </Button>
           <ThemeToggle />
-          <UserButton afterSignOutUrl="/" />
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/logout">Logout</Link>
+          </Button>
         </div>
       </header>
 

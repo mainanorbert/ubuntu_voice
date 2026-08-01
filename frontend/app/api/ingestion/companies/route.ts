@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { get_backend_base_url } from "@/lib/backend_base_url"
-import { resolve_clerk_bearer_for_backend } from "@/lib/server/resolve_clerk_bearer_for_backend"
+import { resolve_auth_bearer_for_backend } from "@/lib/server/resolve_auth_bearer_for_backend"
 
 /**
  * Proxies GET /api/ingestion/companies to list companies for the signed-in owner.
  */
 export async function GET(): Promise<NextResponse> {
-  const auth_result = await resolve_clerk_bearer_for_backend()
+  const auth_result = await resolve_auth_bearer_for_backend()
   if (!auth_result.ok) {
     return auth_result.response
   }
@@ -42,7 +42,7 @@ export async function GET(): Promise<NextResponse> {
  * Proxies POST /api/ingestion/companies to create a company for the signed-in user.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const auth_result = await resolve_clerk_bearer_for_backend()
+  const auth_result = await resolve_auth_bearer_for_backend()
   if (!auth_result.ok) {
     return auth_result.response
   }

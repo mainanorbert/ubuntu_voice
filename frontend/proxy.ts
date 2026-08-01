@@ -1,23 +1,33 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
+import { NextRequest, NextResponse } from "next/server"
 
-const is_protected_route = createRouteMatcher([
-  "/chat(.*)",
-  "/dashboard(.*)",
-  "/usage(.*)",
-  "/guardrails(.*)",
-  "/evaluations(.*)",
-])
+const AUTH_COOKIE_NAME = "ubuntu_voice_session"
+const protected_prefixes = [
+  "/chat",
+  "/dashboard",
+  "/documents",
+  "/usage",
+  "/guardrails",
+  "/evaluations",
+  "/statistics",
+]
 
-export default clerkMiddleware(async (auth, request) => {
-  if (is_protected_route(request)) {
-    await auth.protect()
-  }
-})
+/**
+ * Redirects unauthenticated page requests to the manual/Google login page.
+ */
+export function proxy(request: NextRequest): NextResponse {
+  const is_protected = protected_prefixes.some(
+    (prefix) => request.nextUrl.pathname === prefix || request.nextUrl.pathname.startsWith(`${prefix}/`),
+  )
+  if (!is_protected) return NextResponse.next()
+
+  const has_session = Boolean(request.cookies.get(AUTH_COOKIE_NAME)?.value)
+  if (has_session) return NextResponse.next()
+
+  const login_url = new URL("/login", request.url)
+  login_url.searchParams.set("next", request.nextUrl.pathname)
+  return NextResponse.redirect(login_url)
+}
 
 export const config = {
-  matcher: [
-    "/((?!.+\\.[\\w]+$|_next).*)",
-    "/",
-    "/(api|trpc)(.*)",
-  ],
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/"],
 }

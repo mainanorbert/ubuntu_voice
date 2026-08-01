@@ -31,7 +31,7 @@ class StoredDocumentFile:
 
 
 def upsert_user(session: Session, *, user_id: str, email: str | None) -> tuple[User, bool]:
-    """Create or refresh the local user record that mirrors Clerk identity."""
+    """Create or refresh the local user record for an authenticated identity."""
     user = session.get(User, user_id)
     if user is None:
         user = User(id=user_id, email=email)

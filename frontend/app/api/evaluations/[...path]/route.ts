@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { get_backend_base_url } from "@/lib/backend_base_url"
-import { resolve_clerk_bearer_for_backend } from "@/lib/server/resolve_clerk_bearer_for_backend"
+import { resolve_auth_bearer_for_backend } from "@/lib/server/resolve_auth_bearer_for_backend"
 
 async function proxy_evaluation_request(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> },
 ): Promise<NextResponse> {
-  const auth_result = await resolve_clerk_bearer_for_backend()
+  const auth_result = await resolve_auth_bearer_for_backend()
   if (!auth_result.ok) return auth_result.response
 
   const { path } = await context.params

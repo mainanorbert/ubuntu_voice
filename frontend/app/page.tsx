@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
+import { cookies } from "next/headers"
 import {
   ArrowRight,
   FileText,
@@ -17,6 +17,8 @@ import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
+
+const AUTH_COOKIE_NAME = "ubuntu_voice_session"
 
 /**
  * Renders a mission-focused homepage feature block.
@@ -46,7 +48,10 @@ function feature_card({
   )
 }
 
-export default function Page() {
+export default async function Page() {
+  const cookie_store = await cookies()
+  const is_signed_in = Boolean(cookie_store.get(AUTH_COOKIE_NAME)?.value)
+
   return (
     <div className="relative flex min-h-svh flex-col overflow-hidden bg-background">
       <div
@@ -71,14 +76,17 @@ export default function Page() {
           </Link>
           <nav className="flex shrink-0 items-center gap-1 sm:gap-2">
             <ThemeToggle />
-            <SignedOut>
-              <SignInButton mode="modal">
-                <Button size="sm" variant="outline">
-                  Sign in
+            {!is_signed_in ? (
+              <>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/login">Sign in</Link>
                 </Button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
+                <Button size="sm" className="hidden sm:inline-flex" asChild>
+                  <Link href="/register">Register</Link>
+                </Button>
+              </>
+            ) : (
+              <>
               <Button size="sm" className="hidden sm:inline-flex" asChild>
                 <Link href="/chat">Community chat</Link>
               </Button>
@@ -91,13 +99,11 @@ export default function Page() {
               <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
                 <Link href="/statistics">Statistics</Link>
               </Button>
-              <UserButton
-                afterSignOutUrl="/"
-                appearance={{
-                  elements: { userButtonAvatarBox: "size-9 ring-2 ring-border/80" },
-                }}
-              />
-            </SignedIn>
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/logout">Logout</Link>
+              </Button>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -119,18 +125,20 @@ export default function Page() {
             support for displaced people, women, youth, and local organizations across Africa.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-            <SignedOut>
-              <SignInButton mode="modal">
-                <Button size="lg" className="min-w-[210px] gap-2 px-8 shadow-md">
+            {!is_signed_in ? (
+              <>
+              <Button size="lg" className="min-w-[210px] gap-2 px-8 shadow-md" asChild>
+                <Link href="/register">
                   Start with Ubuntu Voice
                   <ArrowRight className="size-4" aria-hidden />
-                </Button>
-              </SignInButton>
+                </Link>
+              </Button>
               <Button size="lg" variant="outline" className="min-w-[210px]" asChild>
                 <Link href="#mission">Explore mission</Link>
               </Button>
-            </SignedOut>
-            <SignedIn>
+              </>
+            ) : (
+              <>
               <Button size="lg" className="min-w-[220px] gap-2 px-8 shadow-md" asChild>
                 <Link href="/chat">
                   Open community chat
@@ -140,7 +148,8 @@ export default function Page() {
               <Button size="lg" variant="outline" className="min-w-[220px]" asChild>
                 <Link href="/documents">Curate knowledge</Link>
               </Button>
-            </SignedIn>
+              </>
+            )}
           </div>
         </section>
 

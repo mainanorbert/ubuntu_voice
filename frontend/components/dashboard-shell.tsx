@@ -1,6 +1,5 @@
 "use client"
 
-import { UserButton } from "@clerk/nextjs"
 import { ArrowLeft, BarChart3, Gauge, Home, MessageSquare, ShieldAlert } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -50,7 +49,9 @@ export function DashboardShell({ children, title, description }: DashboardShellP
             </Link>
           </Button>
           <ThemeToggle />
-          <UserButton afterSignOutUrl="/" />
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/logout">Logout</Link>
+          </Button>
         </div>
       </header>
 

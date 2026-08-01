@@ -1,7 +1,6 @@
 """Routes for company management and multi-file document ingestion."""
 from typing import Annotated
 
-from clerk_backend_api.security.types import RequestState
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -18,7 +17,7 @@ from src.api.v1.schemas.ingestion import (
     DocumentUploadTicket,
     EmbedTriggerResponse,
 )
-from src.core.clerk_auth import get_authenticated_user_identity, require_clerk_session
+from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
 from src.core.config import Settings
 from src.core.dependencies import get_db_session, get_settings
 from src.models import generate_uuid
@@ -82,7 +81,7 @@ def build_document_response(document) -> DocumentResponse:
 
 @router.get("", response_model=list[CompanyResponse])
 async def get_companies(
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> list[CompanyResponse]:
     """List companies owned by the authenticated user."""
@@ -94,7 +93,7 @@ async def get_companies(
 @router.post("", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED)
 async def post_company(
     body: CompanyCreateRequest,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> CompanyResponse:
     """Create or retrieve a company for the authenticated user by email.
@@ -121,7 +120,7 @@ async def post_company(
 async def patch_company(
     company_id: str,
     body: CompanyUpdateRequest,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> CompanyResponse:
     """Update editable profile fields for an authenticated owner's agent."""
@@ -144,7 +143,7 @@ async def patch_company(
 @router.get("/{company_id}/documents", response_model=CompanyWithDocumentsResponse)
 async def get_company_documents(
     company_id: str,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> CompanyWithDocumentsResponse:
     """Return the authenticated owner's company plus its current document list."""
@@ -164,7 +163,7 @@ async def get_company_documents(
 )
 async def post_company_documents(
     company_id: str,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
     background_tasks: BackgroundTasks,
@@ -248,7 +247,7 @@ async def post_company_documents(
 async def post_company_document_uploads(
     company_id: str,
     payload: DocumentUploadsRequest,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> DocumentUploadsResponse:
@@ -325,7 +324,7 @@ async def post_company_document_uploads(
 async def post_company_document_confirm(
     company_id: str,
     payload: DocumentConfirmRequest,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
     background_tasks: BackgroundTasks,
@@ -424,7 +423,7 @@ async def post_company_document_confirm(
 )
 async def post_company_embed(
     company_id: str,
-    session_state: Annotated[RequestState, Depends(require_clerk_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
     background_tasks: BackgroundTasks,
