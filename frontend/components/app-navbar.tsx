@@ -21,7 +21,7 @@ export function AppNavbar({ is_signed_in = false }: { is_signed_in?: boolean }) 
   const [open, set_open] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#dce4ef] bg-white/95 px-4 shadow-sm backdrop-blur dark:border-[#294263] dark:bg-[#101d33]/95 sm:px-7">
+    <header className="sticky top-0 z-50 w-full border-b border-[#dce4ef] bg-white/95 px-4 shadow-sm backdrop-blur dark:border-[#294263] dark:bg-[#101d33]/95 sm:px-7">
       <div className="mx-auto flex h-[68px] max-w-[1900px] items-center gap-3">
         <Link href="/" className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#2864e8] to-[#24479c] px-3 py-2 text-sm font-semibold text-white">
           <Image src="/ub_voice.png" alt="Ubuntu Voice" width={28} height={28} className="size-7 rounded-full object-cover" priority />

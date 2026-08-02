@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, Gauge, Home, ShieldAlert } from "lucide-react"
+import { BarChart3, Gauge, Home, ShieldAlert, Table2 } from "lucide-react"
 import { AppNavbar } from "@/components/app-navbar"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -12,6 +12,7 @@ const dashboard_links = [
   { href: "/dashboard", label: "Overview", icon: Home },
   { href: "/usage", label: "Usage", icon: Gauge },
   { href: "/guardrails", label: "Guardrails", icon: ShieldAlert },
+  { href: "/statistics", label: "Statistics", icon: Table2 },
   { href: "/evaluations", label: "Evaluations", icon: BarChart3 },
 ]
 
