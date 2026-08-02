@@ -15,6 +15,7 @@ import {
   FileUp,
   FolderOpen,
   Loader2,
+  Eye,
   Pencil,
   Plus,
   RefreshCw,
@@ -277,6 +278,7 @@ export default function DocumentsPage() {
   const [edit_company_description, set_edit_company_description] = useState("")
 
   const [queued_files, set_queued_files] = useState<QueuedFile[]>([])
+  const [pending_upload_company_id, set_pending_upload_company_id] = useState<string | null>(null)
   const [drag_active, set_drag_active] = useState(false)
 
   const [page_loading, set_page_loading] = useState(true)
@@ -365,10 +367,11 @@ export default function DocumentsPage() {
       set_show_create_form(false)
       set_companies((prev) => (prev.some((c) => c.id === created.id) ? prev : [...prev, created as CompanyResponse]))
       set_selected_company_id(created.id)
+      if (queued_files.length > 0) set_pending_upload_company_id(created.id)
     } finally {
       set_creating_company(false)
     }
-  }, [company_description, company_name, company_email, company_phone])
+  }, [company_description, company_name, company_email, company_phone, queued_files.length])
 
   // ── Agent editing ──────────────────────────────────────────────────────────
 
@@ -418,6 +421,7 @@ export default function DocumentsPage() {
       if (!updated.id) { set_error("Unexpected response"); return }
       set_companies((prev) => prev.map((c) => (c.id === updated.id ? (updated as CompanyResponse) : c)))
       set_selected_company_id(updated.id)
+      if (queued_files.length > 0) set_pending_upload_company_id(updated.id)
       cancel_edit_company()
     } finally {
       set_updating_company(false)
@@ -429,6 +433,7 @@ export default function DocumentsPage() {
     edit_company_name,
     edit_company_phone,
     editing_company_id,
+    queued_files.length,
   ])
 
   // ── File queue management ──────────────────────────────────────────────────
@@ -588,6 +593,15 @@ export default function DocumentsPage() {
     upload_via_multipart,
   ])
 
+  useEffect(() => {
+    if (!pending_upload_company_id || pending_upload_company_id !== selected_company_id) return
+    if (queued_files.length === 0) return
+    void (async () => {
+      await upload_queued()
+      set_pending_upload_company_id(null)
+    })()
+  }, [pending_upload_company_id, queued_files.length, selected_company_id, upload_queued])
+
   // ── Embed ──────────────────────────────────────────────────────────────────
 
   const trigger_embed = useCallback(async () => {
@@ -609,7 +623,6 @@ export default function DocumentsPage() {
 
   const can_create_company =
     company_name.trim().length > 0 && company_email.trim().length > 0
-  const description_length = company_description.length
   const can_update_company =
     Boolean(editing_company_id) &&
     edit_company_name.trim().length > 0 &&
@@ -618,7 +631,7 @@ export default function DocumentsPage() {
   const selected_company = companies.find((c) => c.id === selected_company_id)
 
   return (
-    <div className="flex min-h-svh flex-col bg-[#f6f8fb] text-[#071b3b]">
+    <div className="flex min-h-svh w-full min-w-0 flex-col overflow-x-hidden bg-[#f6f8fb] text-[#071b3b]">
       {/* Header */}
       <AppNavbar is_signed_in />
       <header className="hidden sticky top-0 z-20 border-b border-[#183b85] bg-[#23418d] px-4 text-white shadow-sm">
@@ -641,19 +654,38 @@ export default function DocumentsPage() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1880px] flex-1 border-x border-[#dce4ef] px-6 py-5 sm:px-8">
+      <main className="mx-auto w-full min-w-0 max-w-[1880px] flex-1 border-x border-[#dce4ef] px-4 py-5 sm:px-8">
         {page_loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-24 text-muted-foreground">
             <Loader2 className="size-8 animate-spin text-primary" />
             <p className="text-sm">Loading agents...</p>
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[284px_1fr]">
+          <div className="grid gap-4">
 
             {/* ── Left column: agent panel ── */}
             <aside className="flex flex-col gap-4">
-              <div className="min-h-[447px] rounded-xl border border-[#dce4ef] bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between">
+              <div className="rounded-xl border border-[#dce4ef] bg-white p-4 shadow-sm">
+                {/* Create-agent action stays at the top; existing agents follow below. */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    cancel_edit_company()
+                    set_show_create_form((v) => {
+                      if (v) set_queued_files([])
+                      return !v
+                    })
+                  }}
+                  className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-lg bg-[#2864e8] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1f56ce]"
+                >
+                  <Plus className="size-4" />
+                  Create new agent
+                  <ChevronDown
+                    className={cn("size-4 transition-transform", show_create_form && "rotate-180")}
+                  />
+                </button>
+
+                <div className="mt-4 flex items-center justify-between">
                   <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <BrainCircuit className="size-3.5" />
                     agents
@@ -668,6 +700,75 @@ export default function DocumentsPage() {
                     <RefreshCw className="size-3.5" />
                   </Button>
                 </div>
+
+                {show_create_form && (
+                  <div className="mt-3 flex max-w-xl flex-col gap-3 rounded-xl border border-[#dce4ef] bg-[#f8fafc] p-4 shadow-sm dark:bg-[#14233d]">
+                    <input
+                      value={company_name}
+                      onChange={(e) => set_company_name(e.target.value)}
+                      placeholder="Agent name"
+                      className="h-9 w-full rounded-lg border border-[#b9cdeb] bg-background px-3 text-sm outline-none focus-visible:border-[#2864e8]"
+                    />
+                    <input
+                      type="email"
+                      value={company_email}
+                      onChange={(e) => set_company_email(e.target.value)}
+                      placeholder="agent-contact@example.org"
+                      className="h-9 w-full rounded-lg border border-[#b9cdeb] bg-background px-3 text-sm outline-none focus-visible:border-[#2864e8]"
+                    />
+                    <input
+                      type="tel"
+                      value={company_phone}
+                      onChange={(e) => set_company_phone(e.target.value)}
+                      placeholder="+254712345678 (optional)"
+                      className="h-9 w-full rounded-lg border border-[#b9cdeb] bg-background px-3 text-sm outline-none focus-visible:border-[#2864e8]"
+                    />
+                    <textarea
+                      value={company_description}
+                      maxLength={300}
+                      rows={3}
+                      onChange={(e) => set_company_description(e.target.value)}
+                      placeholder="Agent purpose or document focus (optional)"
+                      className="min-h-20 w-full resize-none rounded-lg border border-[#b9cdeb] bg-background px-3 py-2 text-sm outline-none focus-visible:border-[#2864e8]"
+                    />
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[#75adff] bg-background px-2.5 py-2 text-xs text-muted-foreground hover:bg-muted">
+                      <FileUp className="size-3.5 shrink-0 text-primary" />
+                      <span className="min-w-0 flex-1 truncate">
+                        {queued_files.length > 0
+                          ? `${queued_files.length} document${queued_files.length === 1 ? "" : "s"} ready to upload`
+                          : "Add trusted PDF documents (optional)"}
+                      </span>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,application/pdf"
+                        className="sr-only"
+                        onChange={(e) => {
+                          if (e.target.files) enqueue_files(e.target.files)
+                          e.currentTarget.value = ""
+                        }}
+                      />
+                    </label>
+                    {queued_files.length > 0 && (
+                      <div className="flex flex-col gap-1.5 rounded-lg border border-border p-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-medium text-muted-foreground">Documents to upload</p>
+                          <button type="button" onClick={() => set_queued_files([])} className="text-xs text-muted-foreground hover:text-destructive">Clear all</button>
+                        </div>
+                        {queued_files.map((entry) => <QueuedFileRow key={entry.id} entry={entry} on_remove={remove_queued_file} />)}
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-fit self-end bg-[#2864e8] px-4 text-white hover:bg-[#1f56ce]"
+                      disabled={!can_create_company || creating_company}
+                      onClick={() => void create_company()}
+                    >
+                      {creating_company ? <Loader2 className="size-3.5 animate-spin" /> : "Create agent"}
+                    </Button>
+                  </div>
+                )}
 
                 {/* Agent list */}
                 <div className="mt-3 flex flex-col gap-1">
@@ -706,6 +807,16 @@ export default function DocumentsPage() {
                           variant="ghost"
                           size="icon-xs"
                           className="mt-1.5"
+                          onClick={() => set_selected_company_id(c.id)}
+                          title={`View ${c.name}`}
+                        >
+                          <Eye className="size-3 text-muted-foreground dark:text-[#9fb3d0]" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="mt-1.5"
                           onClick={() => begin_edit_company(c)}
                           title={`Edit ${c.name}`}
                         >
@@ -717,14 +828,17 @@ export default function DocumentsPage() {
                 </div>
 
                 {editing_company_id && (
-                  <div className="mt-3 border-t border-border pt-3">
+                  <div className="mt-3 max-w-xl border-t border-border pt-3">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <p className="text-xs font-medium text-foreground">Edit agent</p>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon-xs"
-                        onClick={cancel_edit_company}
+                        onClick={() => {
+                          set_queued_files([])
+                          cancel_edit_company()
+                        }}
                         title="Cancel edit"
                       >
                         <X className="size-3 text-muted-foreground dark:text-[#9fb3d0]" />
@@ -735,21 +849,21 @@ export default function DocumentsPage() {
                         value={edit_company_name}
                         onChange={(e) => set_edit_company_name(e.target.value)}
                         placeholder="Agent name"
-                        className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
+                        className="h-9 w-full rounded-lg border border-[#b9cdeb] bg-background px-3 text-sm outline-none focus-visible:border-[#2864e8]"
                       />
                       <input
                         type="email"
                         value={edit_company_email}
                         onChange={(e) => set_edit_company_email(e.target.value)}
                         placeholder="agent-contact@example.org"
-                        className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
+                        className="h-9 w-full rounded-lg border border-[#b9cdeb] bg-background px-3 text-sm outline-none focus-visible:border-[#2864e8]"
                       />
                       <input
                         type="tel"
                         value={edit_company_phone}
                         onChange={(e) => set_edit_company_phone(e.target.value)}
                         placeholder="+254712345678 (optional)"
-                        className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
+                        className="h-9 w-full rounded-lg border border-[#b9cdeb] bg-background px-3 text-sm outline-none focus-visible:border-[#2864e8]"
                       />
                       <div>
                         <textarea
@@ -758,16 +872,43 @@ export default function DocumentsPage() {
                           rows={4}
                           onChange={(e) => set_edit_company_description(e.target.value)}
                           placeholder="Agent purpose, audience, or document focus (optional)"
-                          className="min-h-24 w-full resize-none rounded-lg border border-input bg-background px-2.5 py-2 text-sm outline-none focus-visible:border-ring"
+                          className="min-h-24 w-full resize-none rounded-lg border border-[#b9cdeb] bg-background px-3 py-2 text-sm outline-none focus-visible:border-[#2864e8]"
                         />
                         <p className="mt-1 text-right text-[11px] text-muted-foreground">
                           {edit_description_length}/300
                         </p>
                       </div>
+                      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[#75adff] bg-background px-2.5 py-2 text-xs text-muted-foreground hover:bg-muted">
+                        <FileUp className="size-3.5 shrink-0 text-primary" />
+                        <span className="min-w-0 flex-1 truncate">
+                          {queued_files.length > 0
+                            ? `${queued_files.length} document${queued_files.length === 1 ? "" : "s"} ready to upload`
+                            : "Add trusted PDF documents (optional)"}
+                        </span>
+                        <input
+                          type="file"
+                          multiple
+                          accept=".pdf,application/pdf"
+                          className="sr-only"
+                          onChange={(e) => {
+                            if (e.target.files) enqueue_files(e.target.files)
+                            e.currentTarget.value = ""
+                          }}
+                        />
+                      </label>
+                      {queued_files.length > 0 && (
+                        <div className="flex flex-col gap-1.5 rounded-lg border border-border p-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-medium text-muted-foreground">Documents to upload</p>
+                            <button type="button" onClick={() => set_queued_files([])} className="text-xs text-muted-foreground hover:text-destructive">Clear all</button>
+                          </div>
+                          {queued_files.map((entry) => <QueuedFileRow key={entry.id} entry={entry} on_remove={remove_queued_file} />)}
+                        </div>
+                      )}
                       <Button
                         type="button"
                         size="sm"
-                        className="w-full gap-1.5"
+                        className="w-fit self-end gap-1.5 bg-[#2864e8] px-4 text-white hover:bg-[#1f56ce]"
                         disabled={!can_update_company || updating_company}
                         onClick={() => void update_company()}
                       >
@@ -782,76 +923,14 @@ export default function DocumentsPage() {
                   </div>
                 )}
 
-                {/* New agent toggle */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    cancel_edit_company()
-                    set_show_create_form((v) => !v)
-                  }}
-                  className="mt-3 flex w-full items-center gap-1.5 rounded-lg bg-[#2864e8] px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-[#1f56ce]"
-                >
-                  <Plus className="size-3.5" />
-                  New agent
-                  <ChevronDown
-                    className={cn("ml-auto size-3.5 transition-transform", show_create_form && "rotate-180")}
-                  />
-                </button>
-
-                {show_create_form && (
-                  <div className="mt-3 flex flex-col gap-2">
-                    <input
-                      value={company_name}
-                      onChange={(e) => set_company_name(e.target.value)}
-                      placeholder="Agent name"
-                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
-                    />
-                    <input
-                      type="email"
-                      value={company_email}
-                      onChange={(e) => set_company_email(e.target.value)}
-                      placeholder="agent-contact@example.org"
-                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
-                    />
-                    <input
-                      type="tel"
-                      value={company_phone}
-                      onChange={(e) => set_company_phone(e.target.value)}
-                      placeholder="+254712345678 (optional)"
-                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring"
-                    />
-                    <div>
-                      <textarea
-                        value={company_description}
-                        maxLength={300}
-                        rows={4}
-                        onChange={(e) => set_company_description(e.target.value)}
-                        placeholder="Agent purpose, audience, or document focus (optional)"
-                        className="min-h-24 w-full resize-none rounded-lg border border-input bg-background px-2.5 py-2 text-sm outline-none focus-visible:border-ring"
-                      />
-                      <p className="mt-1 text-right text-[11px] text-muted-foreground">
-                        {description_length}/300
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="w-full"
-                      disabled={!can_create_company || creating_company}
-                      onClick={() => void create_company()}
-                    >
-                      {creating_company ? <Loader2 className="size-3.5 animate-spin" /> : "Create agent"}
-                    </Button>
-                  </div>
-                )}
               </div>
             </aside>
 
             {/* ── Right column: upload + document list ── */}
-            <div className="flex flex-col gap-6">
+            <div className="flex min-w-0 flex-col gap-6">
 
               {/* Upload panel */}
-              <section className="rounded-xl border border-[#dce4ef] bg-white shadow-sm">
+              <section className="hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm">
                 <div className="border-b border-border px-5 py-3.5">
                   <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Upload className="size-4 text-primary" />

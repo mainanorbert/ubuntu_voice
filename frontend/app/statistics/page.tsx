@@ -1,12 +1,10 @@
 "use client"
 
-import { Home, Loader2, MapPin, RefreshCw, ShieldAlert, Table2 } from "lucide-react"
-import Link from "next/link"
+import { Loader2, MapPin, RefreshCw, ShieldAlert, Table2 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { ThemeToggle } from "@/components/theme-toggle"
+import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
-import { AppNavbar } from "@/components/app-navbar"
 
 type IncidentStatisticResponse = {
   id: string
@@ -127,69 +125,44 @@ export default function StatisticsPage() {
   }, [rows])
 
   return (
-    <div className="flex min-h-svh flex-col bg-background">
-      <AppNavbar is_signed_in />
-      <header className="hidden sticky top-0 z-20 border-b border-border/60 bg-background/90 px-4 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/" aria-label="Return to home">
-              <Home className="size-4" />
-              Home
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-sm font-semibold text-foreground">Incident statistics</h1>
-          </div>
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
-            <Link href="/chat">Chat</Link>
-          </Button>
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
-            <Link href="/documents">Create agent</Link>
-          </Button>
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
-            <Link href="/dashboard">Dashboard</Link>
-          </Button>
-          <ThemeToggle />
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/logout">Logout</Link>
-          </Button>
-        </div>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6">
+    <DashboardShell
+      title="Incident statistics"
+      description="Monitor reported incidents by agent, location, and category."
+    >
+      <div className="flex flex-col gap-6">
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <ShieldAlert className="size-4 text-primary" />
+          <div className="rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-medium text-[#607694]">
+              <ShieldAlert className="size-4 text-[#2864e8]" />
               Total reports
             </div>
-            <p className="mt-3 text-2xl font-semibold text-foreground">{format_count(summary.total_reports)}</p>
+            <p className="mt-3 text-2xl font-semibold text-[#061b3b]">{format_count(summary.total_reports)}</p>
           </div>
-          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <MapPin className="size-4 text-primary" />
+          <div className="rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-medium text-[#607694]">
+              <MapPin className="size-4 text-[#2864e8]" />
               Places
             </div>
-            <p className="mt-3 text-2xl font-semibold text-foreground">{format_count(summary.places.size)}</p>
+            <p className="mt-3 text-2xl font-semibold text-[#061b3b]">{format_count(summary.places.size)}</p>
           </div>
-          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Table2 className="size-4 text-primary" />
+          <div className="rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-medium text-[#607694]">
+              <Table2 className="size-4 text-[#2864e8]" />
               Categories
             </div>
-            <p className="mt-3 text-2xl font-semibold text-foreground">{format_count(summary.types.size)}</p>
+            <p className="mt-3 text-2xl font-semibold text-[#061b3b]">{format_count(summary.types.size)}</p>
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card shadow-sm">
-          <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+        <section className="rounded-xl border border-[#dce4ef] bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-[#dce4ef] px-5 py-3.5">
             <div>
               <h2 className="text-sm font-semibold text-foreground">Regional incident counts</h2>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Aggregated by agent, place, and incident category.
               </p>
             </div>
-            <Button variant="outline" size="sm" disabled={loading || refreshing} onClick={() => void load_rows("refresh")}>
+            <Button variant="outline" size="sm" className="border-[#b9cdeb] text-[#123f88] hover:bg-[#eef5ff]" disabled={loading || refreshing} onClick={() => void load_rows("refresh")}>
               {refreshing ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
               Refresh
             </Button>
@@ -207,7 +180,7 @@ export default function StatisticsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="bg-[#eef5ff] text-xs uppercase tracking-wide text-[#607694]">
                   <tr>
                     <th className="px-5 py-3 font-medium">Place</th>
                     <th className="px-5 py-3 font-medium">Agent</th>
@@ -219,7 +192,7 @@ export default function StatisticsPage() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.id} className="border-t border-border align-top">
+                    <tr key={row.id} className="border-t border-[#edf1f6] align-top">
                       <td className="px-5 py-4 font-medium text-foreground">{row.place}</td>
                       <td className="px-5 py-4 text-muted-foreground">{row.company_name}</td>
                       <td className="max-w-xl px-5 py-4 text-foreground">
@@ -245,7 +218,7 @@ export default function StatisticsPage() {
             </div>
           ) : null}
         </section>
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
   )
 }
