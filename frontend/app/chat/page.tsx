@@ -18,6 +18,7 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { AppNavbar } from "@/components/app-navbar"
 
 type ChatRole = "user" | "assistant"
 
@@ -886,7 +887,8 @@ export default function ChatPage() {
         aria-hidden
       />
 
-      <header className="sticky top-0 z-20 border-b border-[#dce4ef] bg-white px-4 shadow-sm">
+      <AppNavbar is_signed_in />
+      <header className="hidden sticky top-0 z-20 border-b border-[#dce4ef] bg-white px-4 shadow-sm">
         <div className="mx-auto flex h-[66px] max-w-[1840px] items-center gap-3">
           <Link href="/" className="hidden shrink-0 items-center gap-2 text-[#607694] sm:flex">
             <span className="text-xl">⌂</span> Home

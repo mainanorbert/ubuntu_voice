@@ -1,11 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { BarChart3, Gauge, Home, ShieldAlert } from "lucide-react"
-import { ProfileMenu } from "@/components/profile-menu"
+import { AppNavbar } from "@/components/app-navbar"
 
 type CurrentUser = { name: string | null }
 
@@ -24,17 +23,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-svh bg-[#f7f9fc] text-[#061b3b]">
-      <header className="flex h-[91px] items-center justify-between bg-[#23418d] px-6 text-white sm:px-11">
-        <Link href="/dashboard" className="flex items-center gap-3 font-serif text-xl">
-          <Image src="/ub_voice.png" alt="Ubuntu Voice" width={48} height={48} className="size-11 rounded-full object-cover" priority />
-          Ubuntu Voice
-        </Link>
-        <Link href="/" className="ml-4 hidden items-center gap-1.5 rounded-full border border-white/25 px-4 py-2 text-sm text-white/90 hover:bg-white/10 sm:flex">
-          <Home className="size-4" aria-hidden />
-          Home
-        </Link>
-        <ProfileMenu name={name} />
-      </header>
+      <AppNavbar is_signed_in />
 
       <div className="mx-auto flex min-h-[calc(100svh-91px)] max-w-[1900px] flex-col md:flex-row">
         <aside className="w-full shrink-0 border-b border-[#dce4ef] bg-white px-4 py-3 md:w-[224px] md:border-b-0 md:border-r md:px-3 md:py-5">
@@ -43,6 +32,7 @@ export default function DashboardPage() {
             <DashboardLink href="/usage" label="Usage" icon={Gauge} />
             <DashboardLink href="/guardrails" label="Guardrails" icon={ShieldAlert} />
             <DashboardLink href="/evaluations" label="Evaluations" icon={BarChart3} />
+            <DashboardLink href="/statistics" label="Statistics" icon={BarChart3} />
           </nav>
         </aside>
 

@@ -1,4 +1,3 @@
-import Image from "next/image"
 import Link from "next/link"
 import { cookies } from "next/headers"
 import {
@@ -14,9 +13,8 @@ import {
 import type { LucideIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { MobileNav } from "@/components/mobile-nav"
 import { cn } from "@/lib/utils"
-import { ProfileMenu } from "@/components/profile-menu"
+import { AppNavbar } from "@/components/app-navbar"
 
 const AUTH_COOKIE_NAME = "ubuntu_voice_session"
 
@@ -59,50 +57,7 @@ export default async function Page() {
         aria-hidden
       />
 
-      <header className="relative z-50 border-b border-[#dce4ef] bg-[#f7f9fc]/90 backdrop-blur-md">
-        <div className="mx-auto flex h-[94px] max-w-[1640px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
-          <Link href="/" className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-90">
-            <Image
-              src="/ub_voice.png"
-              alt="Ubuntu Voice"
-              width={54}
-              height={54}
-              className="size-[54px] rounded-full object-cover"
-              priority
-            />
-            <span className="font-heading text-xl font-semibold tracking-tight text-[#101a32] sm:text-2xl">Ubuntu Voice</span>
-          </Link>
-          <nav className="flex shrink-0 items-center gap-1 sm:gap-2">
-            <MobileNav is_signed_in={is_signed_in} />
-            {!is_signed_in ? (
-              <>
-                <Button size="lg" variant="outline" className="hidden rounded-full border-[#dce4ef] bg-transparent px-8 text-[#101a32] hover:bg-white sm:inline-flex" asChild>
-                  <Link href="/login">Sign in</Link>
-                </Button>
-                <Button size="lg" className="hidden rounded-full bg-[#2864e8] px-8 text-white shadow-md hover:bg-[#1f56ce] sm:inline-flex" asChild>
-                  <Link href="/register">Register</Link>
-                </Button>
-              </>
-            ) : (
-              <>
-              <Button size="sm" className="hidden rounded-full bg-[#2864e8] text-white hover:bg-[#1f56ce] sm:inline-flex" asChild>
-                <Link href="/chat">Community chat</Link>
-              </Button>
-              <Button size="sm" variant="outline" className="hidden rounded-full border-[#dce4ef] bg-white text-[#123f88] sm:inline-flex" asChild>
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
-              <Button size="sm" variant="outline" className="hidden rounded-full border-[#dce4ef] bg-white text-[#123f88] sm:inline-flex" asChild>
-                <Link href="/documents">Create agent</Link>
-              </Button>
-              <Button size="sm" variant="outline" className="hidden rounded-full border-[#dce4ef] bg-white text-[#123f88] sm:inline-flex" asChild>
-                <Link href="/statistics">Statistics</Link>
-              </Button>
-              <span className="hidden sm:inline-flex"><ProfileMenu /></span>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+      <AppNavbar is_signed_in={is_signed_in} />
 
       <main className="relative z-10 mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-5 py-12 sm:px-8 sm:py-16 lg:py-10">
         <section className="mx-auto max-w-[900px] text-center" aria-labelledby="home-heading">

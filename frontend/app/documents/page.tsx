@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ProfileMenu } from "@/components/profile-menu"
+import { AppNavbar } from "@/components/app-navbar"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -619,7 +620,8 @@ export default function DocumentsPage() {
   return (
     <div className="flex min-h-svh flex-col bg-[#f6f8fb] text-[#071b3b]">
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-[#183b85] bg-[#23418d] px-4 text-white shadow-sm">
+      <AppNavbar is_signed_in />
+      <header className="hidden sticky top-0 z-20 border-b border-[#183b85] bg-[#23418d] px-4 text-white shadow-sm">
         <div className="mx-auto flex h-14 max-w-[1880px] items-center gap-7">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/" aria-label="Return to home">

@@ -3,11 +3,13 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { AuthForm } from "@/components/auth-form"
+import { AppNavbar } from "@/components/app-navbar"
 
 export default function LoginPage() {
   return (
     <main className="flex min-h-svh flex-col bg-[#f7f9fc]">
-      <header className="flex h-[88px] items-center justify-between border-b border-[#dce4ef] px-5 sm:px-10">
+      <AppNavbar is_signed_in={false} />
+      <header className="hidden flex h-[88px] items-center justify-between border-b border-[#dce4ef] px-5 sm:px-10">
         <Link href="/" className="flex items-center gap-3">
           <Image src="/ub_voice.png" alt="Ubuntu Voice" width={48} height={48} className="size-12 rounded-full object-cover" />
           <span className="text-xl font-semibold text-[#101a32]">Ubuntu Voice</span>

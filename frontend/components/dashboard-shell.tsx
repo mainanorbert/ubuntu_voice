@@ -1,8 +1,7 @@
 "use client"
 
 import { BarChart3, Gauge, Home, ShieldAlert } from "lucide-react"
-import Image from "next/image"
-import { ProfileMenu } from "@/components/profile-menu"
+import { AppNavbar } from "@/components/app-navbar"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import type { ReactNode } from "react"
@@ -30,15 +29,7 @@ export function DashboardShell({ children, title, description }: DashboardShellP
 
   return (
     <div className="min-h-svh bg-[#f7f9fc] text-[#061b3b]">
-      <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between bg-[#23418d] px-4 text-white shadow-sm sm:px-7">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="flex items-center gap-2 font-serif text-lg">
-            <Image src="/ub_voice.png" alt="Ubuntu Voice" width={38} height={38} className="size-9 rounded-full object-cover" priority />
-            Ubuntu Voice
-          </Link>
-        </div>
-        <ProfileMenu />
-      </header>
+      <AppNavbar is_signed_in />
 
       <div className="mx-auto flex max-w-[1900px] flex-col md:min-h-[calc(100svh-68px)] md:flex-row">
         <aside className="border-b border-[#dce4ef] bg-white p-2 md:w-56 md:shrink-0 md:border-b-0 md:border-r md:p-3">
