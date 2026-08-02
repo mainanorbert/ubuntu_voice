@@ -157,6 +157,15 @@
   background-color: #19345e;
 }
 
+/* Keep selected agent names and contact details legible over highlighted rows. */
+.dark [class*="bg-[#edf4fd]"] {
+  background-color: #1d3b69;
+}
+
+.dark [class*="bg-[#edf4fd]"] .text-muted-foreground {
+  color: #9fb3d0;
+}
+
 .dark input,
 .dark textarea,
 .dark select {

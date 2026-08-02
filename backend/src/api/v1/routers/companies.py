@@ -96,11 +96,7 @@ async def post_company(
     session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> CompanyResponse:
-    """Create or retrieve a company for the authenticated user by email.
-
-    If a company with the given email already exists it is returned unchanged.
-    A new company is created when the email has not been registered before.
-    """
+    """Create an agent for the authenticated user using a unique contact email."""
     identity = get_authenticated_user_identity(session_state)
     user, _created = upsert_user(db_session, user_id=identity.user_id, email=identity.email)
     company, _new = get_or_create_company(

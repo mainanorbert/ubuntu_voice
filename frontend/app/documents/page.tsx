@@ -689,7 +689,7 @@ export default function DocumentsPage() {
                           onClick={() => set_selected_company_id(c.id)}
                           className={cn(
                             "min-w-0 flex-1 px-3 py-2 text-left text-sm",
-                            c.id === selected_company_id ? "text-primary" : "text-foreground",
+                            c.id === selected_company_id ? "text-[#123f88] dark:text-[#c7d7ee]" : "text-foreground",
                           )}
                         >
                           <span className="block truncate font-medium leading-tight">{c.name}</span>
@@ -709,7 +709,7 @@ export default function DocumentsPage() {
                           onClick={() => begin_edit_company(c)}
                           title={`Edit ${c.name}`}
                         >
-                          <Pencil className="size-3" />
+                          <Pencil className="size-3 text-muted-foreground dark:text-[#9fb3d0]" />
                         </Button>
                       </div>
                     ))
@@ -727,7 +727,7 @@ export default function DocumentsPage() {
                         onClick={cancel_edit_company}
                         title="Cancel edit"
                       >
-                        <X className="size-3" />
+                        <X className="size-3 text-muted-foreground dark:text-[#9fb3d0]" />
                       </Button>
                     </div>
                     <div className="flex flex-col gap-2">

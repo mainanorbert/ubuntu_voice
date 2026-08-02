@@ -55,20 +55,14 @@ def get_or_create_company(
     phone: str | None,
     description: str | None,
 ) -> tuple[Company, bool]:
-    """Return the company matching the given email, creating it if it does not exist.
-
-    Returns a (company, created) tuple where created is True when a new row was inserted.
-    If the email already belongs to another owner the existing company is returned as-is.
-    """
+    """Create an agent and reject email addresses already assigned to an agent."""
     normalized_email = email.strip().lower()
     existing = session.query(Company).filter(Company.email == normalized_email).one_or_none()
     if existing is not None:
-        if phone and not existing.phone:
-            existing.phone = phone
-        if description and not existing.description:
-            existing.description = description
-        session.flush()
-        return existing, False
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This email is already associated with an agent. Use a different email address.",
+        )
 
     normalized_name = name.strip()
     if not normalized_name:
