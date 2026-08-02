@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
+import { AppNavbar } from "@/components/app-navbar"
 
 type IncidentStatisticResponse = {
   id: string
@@ -127,7 +128,8 @@ export default function StatisticsPage() {
 
   return (
     <div className="flex min-h-svh flex-col bg-background">
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 px-4 backdrop-blur-md">
+      <AppNavbar is_signed_in />
+      <header className="hidden sticky top-0 z-20 border-b border-border/60 bg-background/90 px-4 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/" aria-label="Return to home">

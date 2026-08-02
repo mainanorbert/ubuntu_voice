@@ -116,6 +116,69 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Shared dark treatment for the blue-and-slate product surfaces. */
+.dark body {
+  background: #0b1426;
+  color: #e7eefb;
+}
+
+.dark [class*="bg-[#f7f9fc]"],
+.dark [class*="bg-[#f6f8fb]"],
+.dark [class*="bg-[#fbfdff]"],
+.dark [class*="bg-[#fbfcfe]"] {
+  background-color: #0f1b30;
+}
+
+.dark [class*="bg-white"] {
+  background-color: #14233d;
+}
+
+.dark [class*="border-[#dce4ef]"],
+.dark [class*="border-[#d6e2f3]"],
+.dark [class*="border-[#b9cdeb]"],
+.dark [class*="border-[#edf1f6]"] {
+  border-color: #294263;
+}
+
+.dark [class*="text-[#061b3b]"],
+.dark [class*="text-[#101a32]"],
+.dark [class*="text-[#123f88]"] {
+  color: #e7eefb;
+}
+
+.dark [class*="text-[#607694]"],
+.dark [class*="text-[#8aa0bd]"] {
+  color: #a9bbd5;
+}
+
+.dark [class*="bg-[#eef5ff]"],
+.dark [class*="bg-[#edf4ff]"],
+.dark [class*="bg-[#e8f1ff]"] {
+  background-color: #19345e;
+}
+
+/* Keep selected agent names and contact details legible over highlighted rows. */
+.dark [class*="bg-[#edf4fd]"] {
+  background-color: #1d3b69;
+}
+
+.dark [class*="bg-[#edf4fd]"] .text-muted-foreground {
+  color: #9fb3d0;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #101d33;
+  color: #e7eefb;
+  border-color: #395577;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #8ca1bf;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

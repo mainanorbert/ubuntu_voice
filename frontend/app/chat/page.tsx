@@ -6,22 +6,19 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react"
 import {
   Bot,
   BrainCircuit,
-  Building2,
   Globe2,
-  Home,
   Loader2,
   MessageCircle,
   Mic,
   MicOff,
   SendHorizontal,
-  ShieldCheck,
   Sparkles,
   Volume2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
+import { AppNavbar } from "@/components/app-navbar"
 
 type ChatRole = "user" | "assistant"
 
@@ -884,51 +881,48 @@ export default function ChatPage() {
   const can_send = !pending && Boolean(draft.trim()) && Boolean(selected_company_id)
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-background">
+    <div className="relative flex min-h-svh flex-col overflow-hidden bg-[#f7f9fc] text-[#061b3b]">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[linear-gradient(180deg,rgba(35,106,85,0.14),rgba(213,150,52,0.08),transparent)] dark:bg-[linear-gradient(180deg,rgba(74,157,177,0.14),rgba(35,106,85,0.10),transparent)]"
         aria-hidden
       />
 
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 px-4 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/" aria-label="Return to home">
-              <Home className="size-4" />
-              Home
-            </Link>
-          </Button>
-          <Link href="/" className="flex min-w-0 flex-1 items-center gap-3 transition-opacity hover:opacity-90">
+      <AppNavbar is_signed_in />
+      <header className="hidden sticky top-0 z-20 border-b border-[#dce4ef] bg-white px-4 shadow-sm">
+        <div className="mx-auto flex h-[66px] max-w-[1840px] items-center gap-3">
+          <Link href="/" className="hidden shrink-0 items-center gap-2 text-[#607694] sm:flex">
+            <span className="text-xl">⌂</span> Home
+          </Link>
+          <Link href="/" className="flex min-w-0 items-center gap-2 rounded-full bg-gradient-to-r from-[#2864e8] to-[#24479c] px-4 py-2 text-white transition-opacity hover:opacity-90">
             <Image
               src="/ub_voice.png"
               alt="Ubuntu Voice"
-              width={190}
-              height={50}
-              className="h-9 w-auto max-w-[min(190px,44vw)] object-contain object-left"
+              width={28}
+              height={28}
+              className="size-7 rounded-full object-cover"
               priority
             />
-            <span className="hidden rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary sm:inline">
-              Community chat
-            </span>
+            <span className="font-semibold">Ubuntu Voice</span>
           </Link>
-          <Button variant="outline" size="sm" className="hidden shrink-0 sm:inline-flex" asChild>
+          <span className="hidden rounded-xl bg-[#eef5ff] px-4 py-2 text-[#2864e8] sm:inline-flex">Chat</span>
+          <div className="flex-1" />
+          <Button variant="outline" size="sm" className="hidden rounded-full border-[#dce4ef] text-[#607694] sm:inline-flex" asChild>
             <Link href="/documents">Create agent</Link>
           </Button>
-          <Button variant="outline" size="sm" className="hidden shrink-0 sm:inline-flex" asChild>
+          <Button variant="outline" size="sm" className="hidden rounded-full border-[#dce4ef] text-[#607694] sm:inline-flex" asChild>
             <Link href="/statistics">Statistics</Link>
           </Button>
-          <ThemeToggle />
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" className="rounded-full border-[#dce4ef] text-[#607694]" asChild>
             <Link href="/logout">Logout</Link>
           </Button>
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 lg:grid-cols-[19rem_minmax(0,1fr)] lg:py-6">
-        <aside className="flex flex-col gap-4">
-          <section className="rounded-2xl border border-border/80 bg-card/90 p-4 shadow-sm backdrop-blur-sm">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Building2 className="size-4 text-primary" aria-hidden />
+      <main className="relative z-10 mx-auto grid w-full max-w-[1840px] flex-1 gap-0 lg:grid-cols-[384px_minmax(0,1fr)]">
+        <aside className="flex flex-col gap-4 border-b border-[#dce4ef] p-4 lg:border-b-0 lg:border-r lg:p-5">
+          <section className="rounded-2xl border border-[#dce4ef] bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#061b3b]">
+              <span className="rounded-lg bg-[#eef5ff] p-2">📄</span>
               Available Agents
             </div>
             {page_loading ? (
@@ -953,7 +947,7 @@ export default function ChatPage() {
                   id="chat-company"
                   value={selected_company_id ?? ""}
                   onChange={(e) => set_selected_company_id(e.target.value || null)}
-                  className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none ring-ring/50 focus-visible:border-ring focus-visible:ring-3"
+                  className="h-14 w-full rounded-xl border border-[#dce4ef] bg-white px-4 text-lg outline-none focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20"
                 >
                   {companies.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -977,30 +971,30 @@ export default function ChatPage() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-border/80 bg-card/70 p-4 shadow-sm backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <ShieldCheck className="size-4 text-primary" aria-hidden />
+          <section className="rounded-2xl border border-[#dce4ef] bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-lg font-semibold text-[#061b3b]">
+              <span className="rounded-lg bg-[#eef5ff] p-2">🛡️</span>
               Safety scope
             </div>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-3 text-lg leading-relaxed text-[#607694]">
               Privacy-first support for displaced people, women, youth, civil society teams, and local peacebuilders.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <span className="rounded-lg bg-emerald-500/10 px-2.5 py-2 font-medium text-emerald-700 dark:text-emerald-300">
+              <span className="rounded-full bg-[#dff5ee] px-3 py-2 font-medium text-[#178574]">
                 Grounded
               </span>
-              <span className="rounded-lg bg-sky-500/10 px-2.5 py-2 font-medium text-sky-700 dark:text-sky-300">
+              <span className="rounded-full bg-[#eef5ff] px-3 py-2 font-medium text-[#2864e8]">
                 Low-bandwidth
               </span>
             </div>
           </section>
         </aside>
 
-        <section className="flex h-[calc(100svh-9rem)] min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card/95 shadow-xl shadow-black/5 backdrop-blur-sm lg:h-[calc(100svh-7.5rem)]">
-          <div className="flex flex-col gap-3 border-b border-border/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <section className="flex min-h-[calc(100svh-20rem)] min-w-0 flex-col overflow-hidden bg-[#f7f9fc] lg:h-[calc(100svh-66px)]">
+          <div className="flex flex-col gap-3 border-b border-[#dce4ef] bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-9">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef5ff] px-3 py-2 text-sm font-medium text-[#2864e8]">
                   <Globe2 className="size-3.5" aria-hidden />
                   Africa peace support
                 </span>
@@ -1009,14 +1003,14 @@ export default function ChatPage() {
                     "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
                     voice_mode_enabled
                       ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                      : "bg-muted text-muted-foreground",
+                      : "border border-[#dce4ef] bg-white text-[#8aa0bd]",
                   )}
                 >
                   {voice_mode_enabled ? <Mic className="size-3.5" aria-hidden /> : <MicOff className="size-3.5" aria-hidden />}
                   Voice {voice_state_label}
                 </span>
               </div>
-              <h1 className="mt-2 truncate text-base font-semibold text-foreground">
+              <h1 className="mt-2 truncate text-2xl font-semibold text-[#061b3b]">
                 {selected_company ? selected_company.name : "Ubuntu Voice chat"}
               </h1>
             </div>
@@ -1030,7 +1024,7 @@ export default function ChatPage() {
                   id="chat-language"
                   value={selected_language}
                   onChange={(event) => handle_language_change(event.target.value as ChatLanguage)}
-                  className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-sm outline-none ring-ring/50 focus-visible:border-ring focus-visible:ring-3 sm:w-[8.5rem]"
+                  className="h-12 w-full rounded-full border border-[#dce4ef] bg-white pl-4 pr-7 text-lg outline-none focus:border-[#2864e8] sm:w-[9rem]"
                 >
                   {language_options.map((option) => (
                     <option key={option.label} value={option.label}>
@@ -1039,20 +1033,20 @@ export default function ChatPage() {
                   ))}
                 </select>
               </div>
-              <Button variant="outline" size="sm" className="w-full shrink-0 sm:w-auto" asChild>
+              <Button variant="outline" size="lg" className="w-full shrink-0 rounded-full border-[#dce4ef] text-[#607694] sm:w-auto" asChild>
                 <Link href="/documents">Manage documents</Link>
               </Button>
             </div>
           </div>
 
-          <div ref={chat_scroll_ref} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-muted/10 p-4">
+          <div ref={chat_scroll_ref} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[#f7f9fc] p-5 lg:p-9">
             {messages.length === 0 ? (
               <div className="flex min-h-full flex-col items-center justify-center px-3 py-16 text-center">
-                <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-border bg-background text-primary shadow-sm">
+                <div className="mb-4 flex size-20 items-center justify-center rounded-2xl bg-[#e8f1ff] text-[#2864e8] shadow-sm">
                   <MessageCircle className="size-6" aria-hidden />
                 </div>
-                <h2 className="text-balance text-lg font-semibold text-foreground">Ask from trusted local knowledge</h2>
-                <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                <h2 className="text-balance text-2xl font-semibold text-[#061b3b]">Ask from trusted local knowledge</h2>
+                <p className="mt-3 max-w-xl text-center text-lg leading-relaxed text-[#607694]">
                   {selected_company_id
                     ? "Use text or voice for practical support questions about services, rights, community resources, and peacebuilding guidance."
                     : "Select a knowledge base to start a grounded conversation."}
@@ -1132,7 +1126,7 @@ export default function ChatPage() {
             </div>
           ) : null}
 
-          <form className="border-t border-border/70 bg-background/95 p-3" onSubmit={handle_text_submit}>
+          <form className="border-t border-[#dce4ef] bg-white p-4 lg:p-5" onSubmit={handle_text_submit}>
             <label htmlFor="chat-input" className="sr-only">
               Message
             </label>
@@ -1156,7 +1150,7 @@ export default function ChatPage() {
                       : "Ask Ubuntu Voice..."
                     : "Select a knowledge base first..."
                 }
-                className="h-[5.75rem] w-full resize-none rounded-2xl border border-input bg-background px-4 py-3 pb-12 pl-12 pr-14 text-sm shadow-sm outline-none ring-ring/50 transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-3 disabled:opacity-50"
+                className="h-[5.5rem] w-full resize-none rounded-2xl border border-[#dce4ef] bg-white px-4 py-3 pb-12 pl-12 pr-14 text-lg shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-[#8aa0bd] focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20 disabled:opacity-50"
               />
               <Button
                 type="button"
@@ -1176,7 +1170,7 @@ export default function ChatPage() {
               <Button
                 type="submit"
                 size="icon-sm"
-                className="absolute bottom-3 right-3 size-8 rounded-full"
+                className="absolute bottom-3 right-3 size-12 rounded-full bg-[#2864e8] text-white hover:bg-[#1f56ce]"
                 disabled={!can_send}
                 aria-label="Send message"
                 title="Send message"

@@ -14,7 +14,6 @@ import {
   FileText,
   FileUp,
   FolderOpen,
-  Home,
   Loader2,
   Pencil,
   Plus,
@@ -25,8 +24,9 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
+import { ProfileMenu } from "@/components/profile-menu"
+import { AppNavbar } from "@/components/app-navbar"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -618,48 +618,45 @@ export default function DocumentsPage() {
   const selected_company = companies.find((c) => c.id === selected_company_id)
 
   return (
-    <div className="flex min-h-svh flex-col bg-background">
+    <div className="flex min-h-svh flex-col bg-[#f6f8fb] text-[#071b3b]">
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 px-4 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-5xl items-center gap-3">
+      <AppNavbar is_signed_in />
+      <header className="hidden sticky top-0 z-20 border-b border-[#183b85] bg-[#23418d] px-4 text-white shadow-sm">
+        <div className="mx-auto flex h-14 max-w-[1880px] items-center gap-7">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/" aria-label="Return to home">
-              <Home className="size-4" />
               Home
             </Link>
           </Button>
           <div className="min-w-0 flex-1">
-            <h1 className="text-sm font-semibold text-foreground">Agent knowledge</h1>
+            <h1 className="text-xs font-semibold text-white">Agent knowledge</h1>
           </div>
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
+          <Button variant="outline" size="sm" className="hidden border-white/20 bg-transparent text-[11px] text-white hover:bg-white/10 hover:text-white sm:inline-flex" asChild>
             <Link href="/chat">Chat</Link>
           </Button>
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
+          <Button variant="outline" size="sm" className="hidden border-white/20 bg-transparent text-[11px] text-white hover:bg-white/10 hover:text-white sm:inline-flex" asChild>
             <Link href="/statistics">Statistics</Link>
           </Button>
-          <ThemeToggle />
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/logout">Logout</Link>
-          </Button>
+          <ProfileMenu />
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+      <main className="mx-auto w-full max-w-[1880px] flex-1 border-x border-[#dce4ef] px-6 py-5 sm:px-8">
         {page_loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-24 text-muted-foreground">
             <Loader2 className="size-8 animate-spin text-primary" />
             <p className="text-sm">Loading agents...</p>
           </div>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+          <div className="grid gap-4 lg:grid-cols-[284px_1fr]">
 
             {/* ── Left column: agent panel ── */}
             <aside className="flex flex-col gap-4">
-              <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div className="min-h-[447px] rounded-xl border border-[#dce4ef] bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <BrainCircuit className="size-3.5" />
-                    Agents
+                    agents
                   </h2>
                   <Button
                     type="button"
@@ -683,7 +680,7 @@ export default function DocumentsPage() {
                         className={cn(
                           "flex w-full items-start gap-1 rounded-lg pr-1 transition-colors",
                           c.id === selected_company_id
-                            ? "bg-primary/10"
+                            ? "border-[#d6e2f3] bg-[#edf4fd]"
                             : "hover:bg-muted",
                         )}
                       >
@@ -692,7 +689,7 @@ export default function DocumentsPage() {
                           onClick={() => set_selected_company_id(c.id)}
                           className={cn(
                             "min-w-0 flex-1 px-3 py-2 text-left text-sm",
-                            c.id === selected_company_id ? "text-primary" : "text-foreground",
+                            c.id === selected_company_id ? "text-[#123f88] dark:text-[#c7d7ee]" : "text-foreground",
                           )}
                         >
                           <span className="block truncate font-medium leading-tight">{c.name}</span>
@@ -712,7 +709,7 @@ export default function DocumentsPage() {
                           onClick={() => begin_edit_company(c)}
                           title={`Edit ${c.name}`}
                         >
-                          <Pencil className="size-3" />
+                          <Pencil className="size-3 text-muted-foreground dark:text-[#9fb3d0]" />
                         </Button>
                       </div>
                     ))
@@ -730,7 +727,7 @@ export default function DocumentsPage() {
                         onClick={cancel_edit_company}
                         title="Cancel edit"
                       >
-                        <X className="size-3" />
+                        <X className="size-3 text-muted-foreground dark:text-[#9fb3d0]" />
                       </Button>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -792,7 +789,7 @@ export default function DocumentsPage() {
                     cancel_edit_company()
                     set_show_create_form((v) => !v)
                   }}
-                  className="mt-3 flex w-full items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                  className="mt-3 flex w-full items-center gap-1.5 rounded-lg bg-[#2864e8] px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-[#1f56ce]"
                 >
                   <Plus className="size-3.5" />
                   New agent
@@ -854,7 +851,7 @@ export default function DocumentsPage() {
             <div className="flex flex-col gap-6">
 
               {/* Upload panel */}
-              <section className="rounded-xl border border-border bg-card shadow-sm">
+              <section className="rounded-xl border border-[#dce4ef] bg-white shadow-sm">
                 <div className="border-b border-border px-5 py-3.5">
                   <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Upload className="size-4 text-primary" />
@@ -902,8 +899,8 @@ export default function DocumentsPage() {
                       if (e.dataTransfer.files?.length) enqueue_files(e.dataTransfer.files)
                     }}
                     className={cn(
-                      "flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-8 text-center transition-all",
-                      drag_active ? "border-primary bg-primary/5 scale-[1.01]" : "border-border bg-muted/10",
+                      "flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#75adff] bg-[#fbfcfe] py-8 text-center transition-all",
+                      drag_active ? "scale-[1.01] border-[#2864e8] bg-[#f0f6ff]" : "",
                       "hover:border-primary/50 hover:bg-muted/20",
                       "disabled:pointer-events-none disabled:opacity-40",
                     )}

@@ -88,8 +88,8 @@ export default function GuardrailsPage() {
 
   return (
     <DashboardShell title="Guardrails" description="Review recent safety events without exposing raw user content.">
-      <section className="rounded-xl border border-border bg-card shadow-sm">
-        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+      <section className="rounded-xl border border-[#dce4ef] bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Guardrail events</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">Recent blocked and monitored activity.</p>
@@ -107,8 +107,8 @@ export default function GuardrailsPage() {
           </div>
         ) : events.length === 0 ? (
           <div className="px-5 py-16 text-center text-sm text-muted-foreground">No guardrail events recorded yet.</div>
-        ) : (
-          <div className="overflow-x-auto">
+        ) : (<>
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -165,6 +165,10 @@ export default function GuardrailsPage() {
               </tbody>
             </table>
           </div>
+          <div className="divide-y divide-border md:hidden">
+            {events.map((event) => <div key={event.id} className="space-y-2 p-4 text-sm"><div className="flex items-center justify-between gap-3"><span className="font-medium">{event.event_type}</span><span className={`rounded-full px-2 py-0.5 text-xs ${action_badge_class(event.action)}`}>{event.action}</span></div><div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground"><span>{format_timestamp(event.created_at)}</span><span>{mask_user_id(event.user_id)}</span><span>Rules: {event.matched_rules.join(", ") || "None"}</span><span>Tokens: {event.input_token_count === null ? "N/A" : format_count(event.input_token_count)}</span></div></div>)}
+          </div>
+          </>
         )}
       </section>
 

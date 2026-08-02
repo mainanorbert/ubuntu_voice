@@ -49,7 +49,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         set_error(read_error_message(data))
         return
       }
-      router.replace(search_params.get("next") || "/dashboard")
+      router.replace(search_params.get("next") || "/documents")
       router.refresh()
     } catch {
       set_error("Could not reach the authentication service.")
@@ -59,12 +59,12 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
+    <div className="w-full max-w-md rounded-3xl border border-[#dce4ef] bg-white p-6 shadow-lg shadow-[#123f88]/5 sm:p-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-[#101a32]">
           {is_register ? "Create your account" : "Sign in to Ubuntu Voice"}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-[#607694]">
           {is_register
             ? "Register manually or continue with Google."
             : "Use your password or continue with Google."}
@@ -84,35 +84,35 @@ export function AuthForm({ mode }: AuthFormProps) {
       </Button>
 
       <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">or</span>
-        <div className="h-px flex-1 bg-border" />
+        <div className="h-px flex-1 bg-[#dce4ef]" />
+        <span className="text-xs uppercase tracking-wide text-[#8aa0bd]">or</span>
+        <div className="h-px flex-1 bg-[#dce4ef]" />
       </div>
 
       <form className="space-y-4" onSubmit={submit}>
         {is_register ? (
-          <label className="block text-sm font-medium text-foreground">
+          <label className="block text-sm font-medium text-[#123f88]">
             Name
             <input
               name="name"
               autoComplete="name"
-              className="mt-2 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-ring transition focus:ring-2"
+              className="mt-2 h-11 w-full rounded-xl border border-[#b9cdeb] bg-white px-3 text-sm outline-none transition focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20"
               placeholder="Ubuntu Voice user"
             />
           </label>
         ) : null}
-        <label className="block text-sm font-medium text-foreground">
+        <label className="block text-sm font-medium text-[#123f88]">
           Email
           <input
             name="email"
             type="email"
             autoComplete="email"
             required
-            className="mt-2 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-ring transition focus:ring-2"
+            className="mt-2 h-11 w-full rounded-xl border border-[#b9cdeb] bg-white px-3 text-sm outline-none transition focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20"
             placeholder="you@example.org"
           />
         </label>
-        <label className="block text-sm font-medium text-foreground">
+        <label className="block text-sm font-medium text-[#123f88]">
           Password
           <input
             name="password"
@@ -120,7 +120,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             autoComplete={is_register ? "new-password" : "current-password"}
             required
             minLength={8}
-            className="mt-2 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-ring transition focus:ring-2"
+            className="mt-2 h-11 w-full rounded-xl border border-[#b9cdeb] bg-white px-3 text-sm outline-none transition focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20"
             placeholder="At least 8 characters"
           />
         </label>
@@ -131,15 +131,15 @@ export function AuthForm({ mode }: AuthFormProps) {
           </p>
         ) : null}
 
-        <Button type="submit" className="h-11 w-full" disabled={loading}>
+        <Button type="submit" className="h-11 w-full rounded-full bg-[#2864e8] text-white hover:bg-[#1f56ce]" disabled={loading}>
           {loading ? <Loader2 className="size-4 animate-spin" /> : null}
           {is_register ? "Create account" : "Sign in"}
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
+      <p className="mt-6 text-center text-sm text-[#607694]">
         {is_register ? "Already have an account?" : "Need an account?"}{" "}
-        <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={is_register ? "/login" : "/register"}>
+        <Link className="font-medium text-[#2864e8] underline-offset-4 hover:underline" href={is_register ? "/login" : "/register"}>
           {is_register ? "Sign in" : "Register"}
         </Link>
       </p>
