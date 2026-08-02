@@ -9,15 +9,14 @@ import {
   MessageSquare,
   Radio,
   Shield,
-  Sparkles,
   UsersRound,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { MobileNav } from "@/components/mobile-nav"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
+import { ProfileMenu } from "@/components/profile-menu"
 
 const AUTH_COOKIE_NAME = "ubuntu_voice_session"
 
@@ -54,100 +53,93 @@ export default async function Page() {
   const is_signed_in = Boolean(cookie_store.get(AUTH_COOKIE_NAME)?.value)
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-background">
+    <div className="relative flex min-h-svh flex-col overflow-hidden bg-[#f7f9fc]">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[linear-gradient(180deg,rgba(35,106,85,0.14),rgba(213,150,52,0.08),transparent)] dark:bg-[linear-gradient(180deg,rgba(74,157,177,0.14),rgba(35,106,85,0.1),transparent)]"
         aria-hidden
       />
 
-      <header className="relative z-50 border-b border-border/60 bg-background/82 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <header className="relative z-50 border-b border-[#dce4ef] bg-[#f7f9fc]/90 backdrop-blur-md">
+        <div className="mx-auto flex h-[94px] max-w-[1640px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
           <Link href="/" className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-90">
             <Image
               src="/ub_voice.png"
               alt="Ubuntu Voice"
-              width={200}
-              height={52}
-              className="h-9 w-auto max-w-[min(200px,42vw)] object-contain object-left sm:h-10"
+              width={54}
+              height={54}
+              className="size-[54px] rounded-full object-cover"
               priority
             />
-            <span className="hidden font-heading text-sm font-semibold tracking-tight text-foreground sm:inline">
-              Peace support
-            </span>
+            <span className="font-heading text-xl font-semibold tracking-tight text-[#101a32] sm:text-2xl">Ubuntu Voice</span>
           </Link>
           <nav className="flex shrink-0 items-center gap-1 sm:gap-2">
-            <ThemeToggle />
             <MobileNav is_signed_in={is_signed_in} />
             {!is_signed_in ? (
               <>
-                <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
+                <Button size="lg" variant="outline" className="hidden rounded-full border-[#dce4ef] bg-transparent px-8 text-[#101a32] hover:bg-white sm:inline-flex" asChild>
                   <Link href="/login">Sign in</Link>
                 </Button>
-                <Button size="sm" className="hidden sm:inline-flex" asChild>
+                <Button size="lg" className="hidden rounded-full bg-[#2864e8] px-8 text-white shadow-md hover:bg-[#1f56ce] sm:inline-flex" asChild>
                   <Link href="/register">Register</Link>
                 </Button>
               </>
             ) : (
               <>
-              <Button size="sm" className="hidden sm:inline-flex" asChild>
+              <Button size="sm" className="hidden rounded-full bg-[#2864e8] text-white hover:bg-[#1f56ce] sm:inline-flex" asChild>
                 <Link href="/chat">Community chat</Link>
               </Button>
-              <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
+              <Button size="sm" variant="outline" className="hidden rounded-full border-[#dce4ef] bg-white text-[#123f88] sm:inline-flex" asChild>
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
-              <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
+              <Button size="sm" variant="outline" className="hidden rounded-full border-[#dce4ef] bg-white text-[#123f88] sm:inline-flex" asChild>
                 <Link href="/documents">Create agent</Link>
               </Button>
-              <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
+              <Button size="sm" variant="outline" className="hidden rounded-full border-[#dce4ef] bg-white text-[#123f88] sm:inline-flex" asChild>
                 <Link href="/statistics">Statistics</Link>
               </Button>
-              <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
-                <Link href="/logout">Logout</Link>
-              </Button>
+              <span className="hidden sm:inline-flex"><ProfileMenu /></span>
               </>
             )}
           </nav>
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
-        <section className="mx-auto max-w-4xl text-center" aria-labelledby="home-heading">
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
-            <Sparkles className="size-3.5 text-primary" aria-hidden />
-            Privacy-first community peace support
-          </p>
+      <main className="relative z-10 mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-5 py-12 sm:px-8 sm:py-16 lg:py-10">
+        <section className="mx-auto max-w-[900px] text-center" aria-labelledby="home-heading">
           <h1
             id="home-heading"
-            className="font-heading text-balance text-4xl font-semibold tracking-tight text-foreground sm:text-5xl sm:leading-[1.1]"
+            className="font-heading text-balance text-5xl font-bold leading-[1.03] tracking-[-0.045em] text-[#101a32] sm:text-7xl"
           >
-            Trusted local guidance for communities navigating conflict
+            Trusted local guidance for
+            <span className="block bg-gradient-to-r from-[#2864e8] to-[#24479c] bg-clip-text text-transparent">communities navigating</span>
+            <span className="block bg-gradient-to-r from-[#2864e8] to-[#24479c] bg-clip-text text-transparent">conflict</span>
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="mx-auto mt-10 max-w-[760px] text-pretty text-xl leading-[1.55] text-[#607694] sm:text-2xl">
             Ubuntu Voice turns curated peacebuilding and civil society knowledge into low-bandwidth AI
             support for displaced people, women, youth, and local organizations across Africa.
           </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+          <div className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
             {!is_signed_in ? (
               <>
-              <Button size="lg" className="min-w-[210px] gap-2 px-8 shadow-md" asChild>
+              <Button size="lg" className="min-w-[260px] rounded-full bg-[#2864e8] px-9 text-lg text-white shadow-md hover:bg-[#1f56ce]" asChild>
                 <Link href="/register">
                   Start with Ubuntu Voice
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="min-w-[210px]" asChild>
+              <Button size="lg" variant="outline" className="min-w-[260px] rounded-full border-[#dce4ef] bg-white px-9 text-lg text-[#123f88]" asChild>
                 <Link href="#mission">Explore mission</Link>
               </Button>
               </>
             ) : (
               <>
-              <Button size="lg" className="min-w-[220px] gap-2 px-8 shadow-md" asChild>
+              <Button size="lg" className="min-w-[260px] rounded-full bg-[#2864e8] px-9 text-lg text-white shadow-md hover:bg-[#1f56ce]" asChild>
                 <Link href="/chat">
                   Open community chat
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="min-w-[220px]" asChild>
+              <Button size="lg" variant="outline" className="min-w-[260px] rounded-full border-[#dce4ef] bg-white px-9 text-lg text-[#123f88]" asChild>
                 <Link href="/documents">Curate knowledge</Link>
               </Button>
               </>

@@ -1,12 +1,12 @@
 "use client"
 
-import { ArrowLeft, BarChart3, Gauge, Home, MessageSquare, ShieldAlert } from "lucide-react"
+import { BarChart3, Gauge, Home, ShieldAlert } from "lucide-react"
+import Image from "next/image"
+import { ProfileMenu } from "@/components/profile-menu"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import type { ReactNode } from "react"
 
-import { ThemeToggle } from "@/components/theme-toggle"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const dashboard_links = [
@@ -29,35 +29,20 @@ export function DashboardShell({ children, title, description }: DashboardShellP
   const pathname = usePathname()
 
   return (
-    <div className="min-h-svh bg-background">
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/90 px-4 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/">
-              <ArrowLeft className="size-4" />
-              Home
-            </Link>
-          </Button>
-          <Link href="/dashboard" className="font-semibold text-foreground">
+    <div className="min-h-svh bg-[#f7f9fc] text-[#061b3b]">
+      <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between bg-[#23418d] px-4 text-white shadow-sm sm:px-7">
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="flex items-center gap-2 font-serif text-lg">
+            <Image src="/ub_voice.png" alt="Ubuntu Voice" width={38} height={38} className="size-9 rounded-full object-cover" priority />
             Ubuntu Voice
           </Link>
-          <div className="flex-1" />
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
-            <Link href="/chat">
-              <MessageSquare />
-              Chat
-            </Link>
-          </Button>
-          <ThemeToggle />
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/logout">Logout</Link>
-          </Button>
         </div>
+        <ProfileMenu />
       </header>
 
-      <div className="mx-auto flex max-w-7xl flex-col md:min-h-[calc(100svh-3.5rem)] md:flex-row">
-        <aside className="border-b border-border bg-card/40 p-3 md:w-60 md:shrink-0 md:border-r md:border-b-0 md:p-4">
-          <nav className="flex gap-2 overflow-x-auto md:flex-col" aria-label="Dashboard navigation">
+      <div className="mx-auto flex max-w-[1900px] flex-col md:min-h-[calc(100svh-68px)] md:flex-row">
+        <aside className="border-b border-[#dce4ef] bg-white p-2 md:w-56 md:shrink-0 md:border-b-0 md:border-r md:p-3">
+          <nav className="grid grid-cols-2 gap-1 sm:grid-cols-4 md:flex md:flex-col" aria-label="Dashboard navigation">
             {dashboard_links.map((link) => {
               const Icon = link.icon
               const is_active = pathname === link.href
@@ -67,10 +52,10 @@ export function DashboardShell({ children, title, description }: DashboardShellP
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
                     is_active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      ? "bg-[#eef5ff] font-medium text-[#123f88]"
+                      : "text-[#607694] hover:bg-[#f4f7fb] hover:text-[#123f88]",
                   )}
                 >
                   <Icon className="size-4" />
@@ -81,10 +66,10 @@ export function DashboardShell({ children, title, description }: DashboardShellP
           </nav>
         </aside>
 
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mb-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <main className="min-w-0 flex-1 px-4 py-5 sm:px-7 sm:py-7 lg:px-10">
+          <div className="mb-5">
+            <h1 className="font-serif text-2xl tracking-tight text-[#061b3b]">{title}</h1>
+            <p className="mt-1 text-sm text-[#607694]">{description}</p>
           </div>
           {children}
         </main>

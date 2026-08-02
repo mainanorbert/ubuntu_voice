@@ -52,11 +52,11 @@ function error_message(data: unknown): string {
 
 // Displays a pass, fail, or unavailable grade badge.
 function GradeBadge({ value }: { value: boolean | null }) {
-  if (value === null) return <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">Unavailable</span>
+  if (value === null) return <span className="rounded-full bg-[#eef5ff] px-2 py-1 text-xs text-[#607694]">Unavailable</span>
   return value ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-1 text-xs text-emerald-700 dark:text-emerald-400"><CheckCircle2 className="size-3" />Pass</span>
+    <span className="inline-flex items-center gap-1 rounded-full bg-[#dff5ee] px-2 py-1 text-xs text-[#178574]"><CheckCircle2 className="size-3" />Pass</span>
   ) : (
-    <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-1 text-xs text-destructive"><XCircle className="size-3" />Fail</span>
+    <span className="inline-flex items-center gap-1 rounded-full bg-[#ffe1e1] px-2 py-1 text-xs text-[#bd2529]"><XCircle className="size-3" />Fail</span>
   )
 }
 
@@ -191,15 +191,15 @@ export default function EvaluationsPage() {
 
   return (
     <DashboardShell title="Evaluations" description="Run independent RAG quality checks against an agent's test dataset.">
-      <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+      <section className="rounded-xl border border-[#d6e2f3] bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="flex-1 text-sm font-medium text-foreground">
             Agent
-            <select value={company_id} onChange={(event) => set_company_id(event.target.value)} className="mt-2 h-9 w-full rounded-lg border border-border bg-background px-3">
+            <select value={company_id} onChange={(event) => set_company_id(event.target.value)} className="mt-2 h-9 w-full rounded-lg border border-[#b9cdeb] bg-white px-3 outline-none focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20">
               {companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}
             </select>
           </label>
-          <Button onClick={() => void run_evaluation()} disabled={!company_id || !workspace?.questions.length || is_running || saving}>
+          <Button className="w-full bg-[#2864e8] text-white hover:bg-[#1f56ce] sm:w-auto" onClick={() => void run_evaluation()} disabled={!company_id || !workspace?.questions.length || is_running || saving}>
             {is_running ? <Loader2 className="animate-spin" /> : <Play />} {is_running ? "Running..." : "Run evaluation"}
           </Button>
         </div>
@@ -217,10 +217,10 @@ export default function EvaluationsPage() {
       {error ? <div className="mt-5 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div> : null}
 
       <section className="mt-6 space-y-5">
-        <div className="rounded-xl border border-border bg-card shadow-sm">
+        <div className="rounded-xl border border-[#d6e2f3] bg-white shadow-sm">
           <button
             type="button"
-            className="flex w-full items-center gap-3 px-5 py-4 text-left"
+            className="flex w-full items-center gap-3 px-4 py-3 text-left"
             onClick={() => set_dataset_expanded((current) => !current)}
             aria-expanded={dataset_expanded}
           >
@@ -233,7 +233,7 @@ export default function EvaluationsPage() {
 
           {dataset_expanded ? (
             <div className="border-t border-border">
-              <div className="grid gap-3 p-5 md:grid-cols-2">
+              <div className="grid gap-3 p-4 md:grid-cols-2">
                 <textarea value={question} onChange={(event) => set_question(event.target.value)} placeholder="Question" className="min-h-32 w-full rounded-lg border border-border bg-background p-3 text-sm" disabled={is_running} />
                 <textarea value={reference_answer} onChange={(event) => set_reference_answer(event.target.value)} placeholder="Reference answer" className="min-h-32 w-full rounded-lg border border-border bg-background p-3 text-sm" disabled={is_running} />
                 <div className="md:col-span-2">
@@ -242,7 +242,7 @@ export default function EvaluationsPage() {
               </div>
               <div className="max-h-[30rem] divide-y divide-border overflow-y-auto border-t border-border">
                 {workspace?.questions.map((item) => (
-                  <div key={item.id} className="flex gap-3 p-5">
+                  <div key={item.id} className="flex gap-3 p-4">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-foreground">{item.question}</p>
                       <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{item.reference_answer}</p>
@@ -259,13 +259,13 @@ export default function EvaluationsPage() {
           {workspace?.latest_run ? (
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {summary.map((item) => <div key={item.key} className="rounded-xl border border-border bg-card p-4 shadow-sm"><p className="text-xs text-muted-foreground">{grade_labels[item.key]}</p><p className="mt-2 text-xl font-semibold">{item.passed}/{item.total}</p></div>)}
+                {summary.map((item) => <div key={item.key} className="rounded-xl border border-[#d6e2f3] bg-[#fbfdff] p-3 shadow-sm"><p className="text-xs text-[#607694]">{grade_labels[item.key]}</p><p className="mt-1 text-xl font-semibold text-[#123f88]">{item.passed}/{item.total}</p></div>)}
               </div>
               {workspace.latest_run.results.map((result) => {
                 const is_expanded = expanded.has(result.id)
                 return (
-                  <article key={result.id} className="rounded-xl border border-border bg-card shadow-sm">
-                    <button type="button" className="flex w-full items-start gap-3 p-5 text-left" onClick={() => toggle_result(result.id)}>
+                  <article key={result.id} className="rounded-xl border border-[#d6e2f3] bg-white shadow-sm">
+                    <button type="button" className="flex w-full items-start gap-3 p-4 text-left" onClick={() => toggle_result(result.id)}>
                       <div className="min-w-0 flex-1"><h3 className="font-medium text-foreground">{result.question}</h3><div className="mt-3 flex flex-wrap gap-2">{(Object.keys(grade_labels) as GradeKey[]).map((key) => <span key={key} className="inline-flex items-center gap-1 text-xs text-muted-foreground">{grade_labels[key]} <GradeBadge value={result[`${key}_passed`]} /></span>)}</div></div>
                       {is_expanded ? <ChevronUp /> : <ChevronDown />}
                     </button>

@@ -104,13 +104,13 @@ export default function UsagePage() {
 
   return (
     <DashboardShell title="Usage" description="Monitor model spend and request volume.">
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-3 md:grid-cols-3">
         {[
           { label: "Total spend", value: format_currency(summary.total_cost_usd), icon: CreditCard },
           { label: "Tracked users", value: format_count(rows.length), icon: Table2 },
           { label: "Total requests", value: format_count(summary.total_requests), icon: RefreshCw },
         ].map((item) => (
-          <div key={item.label} className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <div key={item.label} className="rounded-xl border border-[#dce4ef] bg-white p-4 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <item.icon className="size-4 text-primary" />
               {item.label}
@@ -120,8 +120,8 @@ export default function UsagePage() {
         ))}
       </section>
 
-      <section className="mt-6 rounded-xl border border-border bg-card shadow-sm">
-        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+      <section className="mt-5 rounded-xl border border-[#dce4ef] bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div>
             <h2 className="text-sm font-semibold text-foreground">User spend</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">Cumulative spend and token totals by user.</p>
@@ -139,8 +139,8 @@ export default function UsagePage() {
           </div>
         ) : rows.length === 0 ? (
           <div className="px-5 py-16 text-center text-sm text-muted-foreground">No spend has been recorded yet.</div>
-        ) : (
-          <div className="overflow-x-auto">
+        ) : (<>
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -166,6 +166,10 @@ export default function UsagePage() {
               </tbody>
             </table>
           </div>
+          <div className="divide-y divide-border md:hidden">
+            {rows.map((row) => <div key={row.user_id} className="space-y-2 p-4 text-sm"><div className="flex justify-between gap-3"><span className="truncate font-medium">{row.email ?? mask_user_id(row.user_id)}</span><span className="font-medium">{format_currency(row.total_cost_usd)}</span></div><div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground"><span>Requests: {format_count(row.total_requests)}</span><span>Total tokens: {format_count(row.total_tokens)}</span><span>Prompt: {format_count(row.total_prompt_tokens)}</span><span>Completion: {format_count(row.total_completion_tokens)}</span></div><p className="text-xs text-muted-foreground">Updated {format_timestamp(row.updated_at)}</p></div>)}
+          </div>
+          </>
         )}
       </section>
 

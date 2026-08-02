@@ -43,7 +43,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL("/login?error=google_failed", request.url))
   }
 
-  const response = NextResponse.redirect(new URL("/dashboard", request.url))
+  const response = NextResponse.redirect(new URL("/documents", request.url))
   set_session_cookie(response, data.token, data.expires_in)
   response.cookies.set({
     name: GOOGLE_STATE_COOKIE,
