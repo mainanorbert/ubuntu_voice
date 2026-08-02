@@ -65,13 +65,11 @@ export default async function Page() {
             id="home-heading"
             className="font-heading text-balance text-5xl font-bold leading-[1.03] tracking-[-0.045em] text-[#101a32] sm:text-7xl"
           >
-            Trusted local guidance for
-            <span className="block bg-gradient-to-r from-[#2864e8] to-[#24479c] bg-clip-text text-transparent">communities navigating</span>
-            <span className="block bg-gradient-to-r from-[#2864e8] to-[#24479c] bg-clip-text text-transparent">conflict</span>
+            Trusted guidance for
+            <span className="block bg-gradient-to-r from-[#2864e8] to-[#24479c] bg-clip-text text-transparent">communities in conflict</span>
           </h1>
-          <p className="mx-auto mt-10 max-w-[760px] text-pretty text-xl leading-[1.55] text-[#607694] sm:text-2xl">
-            Ubuntu Voice turns curated peacebuilding and civil society knowledge into low-bandwidth AI
-            support for displaced people, women, youth, and local organizations across Africa.
+          <p className="mx-auto mt-8 max-w-[640px] text-pretty text-lg leading-relaxed text-[#607694] sm:text-xl">
+            Low-bandwidth AI support grounded in trusted local knowledge.
           </p>
           <div className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
             {!is_signed_in ? (
@@ -90,7 +88,7 @@ export default async function Page() {
               <>
               <Button size="lg" className="min-w-[260px] rounded-full bg-[#2864e8] px-9 text-lg text-white shadow-md hover:bg-[#1f56ce]" asChild>
                 <Link href="/chat">
-                  Open community chat
+                  Open Community chat
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
               </Button>
