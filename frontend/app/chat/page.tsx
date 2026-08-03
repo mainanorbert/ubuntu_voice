@@ -1076,8 +1076,8 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <main className="relative z-10 flex w-full flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-10">
-        <section className="mx-auto flex min-h-[calc(100svh-100px)] w-full max-w-[1120px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#dce4ef] bg-[#f7f9fc] shadow-sm lg:h-[calc(100svh-116px)]">
+      <main className="relative z-10 flex min-h-0 w-full flex-1 px-4 py-2 sm:px-6 sm:py-4 lg:px-10 lg:py-6">
+        <section className="mx-auto flex min-h-0 w-full max-w-[1120px] min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#dce4ef] bg-[#f7f9fc] shadow-sm lg:h-[calc(100svh-116px)] lg:flex-none">
           <div className="flex flex-col gap-3 border-b border-[#dce4ef] bg-white px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6 lg:px-8">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -1101,9 +1101,7 @@ export default function ChatPage() {
                   Voice {voice_state_label}
                 </span>
               </div>
-              <h1 className="mt-2 text-2xl font-semibold text-[#1E3A8A]">
-                Ubuntu Voice chat
-              </h1>
+
               {page_loading ? (
                 <p className="mt-1 inline-flex items-center gap-2 text-sm text-[#607694]">
                   <Loader2 className="size-3.5 animate-spin" aria-hidden />
@@ -1177,7 +1175,7 @@ export default function ChatPage() {
           <div
             ref={chat_scroll_ref}
             className={cn(
-              "min-h-0 flex-1 space-y-4 bg-[#f7f9fc] px-3 py-2 sm:px-8 sm:py-7 lg:px-12",
+              "min-h-0 flex-1 space-y-4 bg-[#f7f9fc] px-2 py-2 sm:px-8 sm:py-7 lg:px-12",
               messages.length === 0 ? "overflow-hidden" : "overflow-y-auto"
             )}
           >
@@ -1185,7 +1183,7 @@ export default function ChatPage() {
               <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-4 py-4 text-center sm:min-h-[22rem] sm:px-12 sm:pt-20 sm:pb-10 lg:min-h-0 lg:px-12 lg:py-6">
                 <EmergencyBackground />
                 <div className="relative z-10 flex flex-col items-center">
-                  <div className="mb-4 flex size-20 items-center justify-center rounded-full bg-[#dbeafe] shadow-sm ring-4 ring-[#eff6ff] sm:mb-8 sm:size-28 sm:ring-8 lg:mb-4 lg:size-24">
+                  <div className="mb-4 flex size-15 items-center justify-center rounded-full bg-[#dbeafe] shadow-sm ring-2 ring-[#eff6ff] sm:mb-8 sm:size-28 sm:ring-8 lg:mb-1 lg:size-20">
                     <div className="ubuntu-chat-float flex size-16 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-md sm:size-24 lg:size-20">
                       <Megaphone
                         className="size-8 sm:size-12 lg:size-10"
@@ -1194,13 +1192,10 @@ export default function ChatPage() {
                       />
                     </div>
                   </div>
-                  <h2 className="text-xl font-semibold text-balance text-[#1E3A8A] sm:text-2xl">
+                  <h2 className="text-xl font-semibold text-balance text-[#1E3A8A] sm:text-xl">
                     Report Emergencies. Find Help. Stay Safe.
                   </h2>
-                  <p className="mt-2 max-w-xl text-center text-base leading-normal text-[#607694] sm:mt-4 sm:text-lg sm:leading-relaxed">
-                    Quickly report incidents, request assistance, and access
-                    trusted support for you and your community.
-                  </p>
+
                   <div
                     className="mt-4 flex items-end gap-1.5 sm:mt-7"
                     aria-label="Ubuntu Voice is ready"
@@ -1305,7 +1300,7 @@ export default function ChatPage() {
             <div className="relative">
               <textarea
                 id="chat-input"
-                rows={3}
+                rows={2}
                 value={draft}
                 disabled={pending || !selected_company_id}
                 onChange={(e) => set_draft(e.target.value)}
@@ -1322,7 +1317,7 @@ export default function ChatPage() {
                       : "Ask Ubuntu Voice..."
                     : "Select a knowledge base first..."
                 }
-                className="ubuntu-chat-input h-20 w-full resize-none overflow-y-auto rounded-2xl border border-[#dce4ef] bg-white px-3 py-2 pr-14 pb-10 pl-11 text-base shadow-sm transition-[border-color,box-shadow] outline-none placeholder:text-[#8aa0bd] focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20 sm:h-[5.5rem] sm:px-4 sm:py-3 sm:pb-12 sm:pl-12 sm:text-lg disabled:opacity-50"
+                className="ubuntu-chat-input h-14 w-full resize-none overflow-y-auto rounded-2xl border border-[#dce4ef] bg-white px-3 py-2 pr-14 pb-8 pl-11 text-base shadow-sm transition-[border-color,box-shadow] outline-none placeholder:text-[#8aa0bd] focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20 sm:h-16 sm:px-4 sm:py-2 sm:pb-9 sm:pl-12 sm:text-lg disabled:opacity-50"
               />
               <Button
                 type="button"
