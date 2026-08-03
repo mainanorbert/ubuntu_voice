@@ -27,23 +27,18 @@ def test_document_ingestion_persists_pending_metadata(tmp_path, monkeypatch):
     monkeypatch.setenv("SUPABASE_KEY", "")
     monkeypatch.setenv("SUPABASE_SERVICE_KEY", "")
 
-    from clerk_backend_api.security.types import AuthStatus, RequestState
-    from src.core.clerk_auth import require_clerk_session
+    from src.core.auth import UserIdentity, require_auth_session
     from src.core.dependencies import clear_database_caches
 
     clear_database_caches()
 
     from src.main import app
 
-    async def stub_require_clerk_session():
-        """Return a signed-in Clerk state without calling the Clerk SDK."""
-        return RequestState(
-            status=AuthStatus.SIGNED_IN,
-            token="test-session",
-            payload={"sub": "user_ingest_test", "email": "owner@example.com"},
-        )
+    async def stub_require_auth_session():
+        """Return a signed-in local user identity without verifying a token."""
+        return UserIdentity(user_id="user_ingest_test", email="owner@example.com")
 
-    app.dependency_overrides[require_clerk_session] = stub_require_clerk_session
+    app.dependency_overrides[require_auth_session] = stub_require_auth_session
     try:
         with TestClient(app) as client:
             company_response = client.post(
@@ -87,6 +82,37 @@ def test_document_ingestion_persists_pending_metadata(tmp_path, monkeypatch):
             listed = list_response.json()
             assert len(listed["documents"]) == 1
             assert listed["documents"][0]["id"] == body["id"]
+
+            # Seed a vector row to verify document deletion removes embeddings too.
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import Session
+            from src.models import DocumentChunk, EMBEDDING_SCHEMA_DIMENSION
+
+            engine = create_engine(f"sqlite:///{db_file}")
+            with Session(engine) as session:
+                session.add(
+                    DocumentChunk(
+                        company_id=company_id,
+                        document_id=body["id"],
+                        content="Test embedding chunk",
+                        embedding=[0.0] * EMBEDDING_SCHEMA_DIMENSION,
+                        chunk_index=0,
+                    )
+                )
+                session.commit()
+
+            delete_response = client.delete(
+                f"/api/v1/companies/{company_id}/documents/{body['id']}"
+            )
+            assert delete_response.status_code == 204, delete_response.text
+            assert not stored_path.exists()
+
+            with Session(engine) as session:
+                assert session.query(DocumentChunk).filter_by(document_id=body["id"]).count() == 0
+
+            after_delete = client.get(f"/api/v1/companies/{company_id}/documents")
+            assert after_delete.status_code == 200
+            assert after_delete.json()["documents"] == []
     finally:
         app.dependency_overrides.clear()
         clear_database_caches()

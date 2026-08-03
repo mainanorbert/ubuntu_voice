@@ -20,7 +20,7 @@ from src.api.v1.schemas.ingestion import (
 from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
 from src.core.config import Settings
 from src.core.dependencies import get_db_session, get_settings
-from src.models import generate_uuid
+from src.models import Document, DocumentChunk, generate_uuid
 from src.services.embedding_pipeline import run_embedding_pipeline_for_company
 from src.services.ingestion import (
     StoredDocumentFile,
@@ -150,6 +150,52 @@ async def get_company_documents(
         company=build_company_response(company),
         documents=[build_document_response(d) for d in documents],
     )
+
+
+@router.delete("/{company_id}/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_company_document(
+    company_id: str,
+    document_id: str,
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> None:
+    """Permanently delete an owned document, its stored file, and its embeddings."""
+    identity = get_authenticated_user_identity(session_state)
+    user, _created = upsert_user(db_session, user_id=identity.user_id, email=identity.email)
+    company = get_owned_company(db_session, company_id=company_id, owner_id=user.id)
+    document = (
+        db_session.query(Document)
+        .filter(Document.id == document_id, Document.company_id == company.id)
+        .one_or_none()
+    )
+    if document is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+    try:
+        # Do not remove the database record unless durable storage has accepted the deletion.
+        # A missing object is treated as deleted by the storage adapter, making retries safe.
+        await delete_stored_document_file(settings=settings, file_path=document.file_path)
+    except ExternalStorageError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="The document could not be removed from storage. Please try again.",
+        ) from exc
+
+    try:
+        # Explicit removal protects existing deployments even if an older database
+        # migration lacks the document_chunks foreign-key cascade.
+        db_session.query(DocumentChunk).filter(DocumentChunk.document_id == document.id).delete(
+            synchronize_session=False
+        )
+        db_session.delete(document)
+        db_session.commit()
+    except SQLAlchemyError as exc:
+        db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The document could not be deleted. Please try again.",
+        ) from exc
 
 
 @router.post(

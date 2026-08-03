@@ -135,7 +135,10 @@ function format_error_payload(data: unknown): string {
  */
 function browser_speech_is_supported(): boolean {
   if (typeof window === "undefined") return false
-  return Boolean((window.SpeechRecognition ?? window.webkitSpeechRecognition) && window.speechSynthesis)
+  return Boolean(
+    (window.SpeechRecognition ?? window.webkitSpeechRecognition) &&
+    window.speechSynthesis
+  )
 }
 
 /**
@@ -169,8 +172,12 @@ function reveal_text_at_boundary(text: string, char_index: number): string {
   if (char_index < 0) return ""
   const next_space = text.indexOf(" ", char_index)
   const next_break = text.indexOf("\n", char_index)
-  const next_stop = [next_space, next_break].filter((index) => index >= 0).sort((a, b) => a - b)[0]
-  return text.slice(0, next_stop === undefined ? text.length : next_stop).trimEnd()
+  const next_stop = [next_space, next_break]
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0]
+  return text
+    .slice(0, next_stop === undefined ? text.length : next_stop)
+    .trimEnd()
 }
 
 const language_options: LanguageOption[] = [
@@ -181,13 +188,29 @@ const language_options: LanguageOption[] = [
   { label: "Portuguese", locale: "pt-PT" },
 ]
 
-const voice_bar_heights = ["h-6", "h-10", "h-7", "h-12", "h-8", "h-14", "h-9", "h-11", "h-7", "h-12", "h-8", "h-10"]
+const voice_bar_heights = [
+  "h-6",
+  "h-10",
+  "h-7",
+  "h-12",
+  "h-8",
+  "h-14",
+  "h-9",
+  "h-11",
+  "h-7",
+  "h-12",
+  "h-8",
+  "h-10",
+]
 
 /**
  * Returns the browser speech locale for a supported chat language.
  */
 function locale_for_language(language: ChatLanguage): string {
-  return language_options.find((option) => option.label === language)?.locale ?? "en-US"
+  return (
+    language_options.find((option) => option.label === language)?.locale ??
+    "en-US"
+  )
 }
 
 /**
@@ -224,9 +247,18 @@ function VoicePulsePanel({
   voice_status: string
 }) {
   const pulse_active = listening || speaking || live_transcript.length > 0
-  const state_label = listening ? "Listening" : pending ? "Thinking" : speaking ? "Speaking" : "Ready"
+  const state_label = listening
+    ? "Listening"
+    : pending
+      ? "Thinking"
+      : speaking
+        ? "Speaking"
+        : "Ready"
   const status_text =
-    voice_error ?? (speech_supported === false ? "Voice mode is unavailable in this browser." : voice_status)
+    voice_error ??
+    (speech_supported === false
+      ? "Voice mode is unavailable in this browser."
+      : voice_status)
 
   return (
     <div className="h-28 shrink-0 overflow-hidden border-t border-border/70 bg-[linear-gradient(135deg,rgba(35,106,85,0.10),rgba(74,157,177,0.10),rgba(213,150,52,0.08))] px-4 py-3 dark:bg-[linear-gradient(135deg,rgba(35,106,85,0.20),rgba(74,157,177,0.14),rgba(213,150,52,0.10))]">
@@ -274,7 +306,7 @@ function VoicePulsePanel({
                   height,
                   pulse_active
                     ? "ubuntu-voice-wave bg-primary/70 shadow-[0_0_12px_rgba(35,106,85,0.25)]"
-                    : "bg-muted-foreground/25",
+                    : "bg-muted-foreground/25"
                 )}
                 style={{
                   animationDelay: `${index * 70}ms`,
@@ -296,20 +328,27 @@ function VoicePulsePanel({
 
 export default function ChatPage() {
   const [companies, set_companies] = useState<CompanyResponse[]>([])
-  const [selected_company_id, set_selected_company_id] = useState<string | null>(null)
+  const [selected_company_id, set_selected_company_id] = useState<
+    string | null
+  >(null)
   const [messages, set_messages] = useState<ChatMessage[]>([])
   const [draft, set_draft] = useState("")
   const [pending, set_pending] = useState(false)
   const [page_loading, set_page_loading] = useState(true)
   const [error, set_error] = useState<string | null>(null)
-  const [speech_supported, set_speech_supported] = useState<boolean | null>(null)
+  const [speech_supported, set_speech_supported] = useState<boolean | null>(
+    null
+  )
   const [voice_mode_enabled, set_voice_mode_enabled] = useState(false)
   const [listening, set_listening] = useState(false)
   const [speaking, set_speaking] = useState(false)
-  const [voice_status, set_voice_status] = useState("Turn on voice mode to speak with Ubuntu Voice.")
+  const [voice_status, set_voice_status] = useState(
+    "Turn on voice mode to speak with Ubuntu Voice."
+  )
   const [voice_error, set_voice_error] = useState<string | null>(null)
   const [live_transcript, set_live_transcript] = useState("")
-  const [selected_language, set_selected_language] = useState<ChatLanguage>("English")
+  const [selected_language, set_selected_language] =
+    useState<ChatLanguage>("English")
 
   const chat_scroll_ref = useRef<HTMLDivElement | null>(null)
   const list_end_ref = useRef<HTMLDivElement | null>(null)
@@ -339,7 +378,11 @@ export default function ChatPage() {
   }, [])
 
   const clear_listen_retry = useCallback(() => {
-    if (typeof window === "undefined" || listen_retry_timeout_ref.current === null) return
+    if (
+      typeof window === "undefined" ||
+      listen_retry_timeout_ref.current === null
+    )
+      return
     window.clearTimeout(listen_retry_timeout_ref.current)
     listen_retry_timeout_ref.current = null
   }, [])
@@ -353,7 +396,7 @@ export default function ChatPage() {
         start_listening_ref.current()
       }, delay_ms)
     },
-    [clear_listen_retry],
+    [clear_listen_retry]
   )
 
   const stop_current_recognition = useCallback((abort = true) => {
@@ -370,77 +413,98 @@ export default function ChatPage() {
     }
   }, [])
 
-  const append_assistant_message = useCallback((content: string, grounded: boolean | null): string => {
-    const message_id = crypto.randomUUID()
-    set_messages((prev) => [
-      ...prev,
-      {
-        id: message_id,
-        role: "assistant",
-        content,
-        grounded,
-      },
-    ])
-    return message_id
-  }, [])
+  const append_assistant_message = useCallback(
+    (content: string, grounded: boolean | null): string => {
+      const message_id = crypto.randomUUID()
+      set_messages((prev) => [
+        ...prev,
+        {
+          id: message_id,
+          role: "assistant",
+          content,
+          grounded,
+        },
+      ])
+      return message_id
+    },
+    []
+  )
 
-  const update_assistant_message = useCallback((message_id: string, content: string) => {
-    set_messages((prev) =>
-      prev.map((message) => (message.id === message_id ? { ...message, content } : message)),
-    )
-  }, [])
+  const update_assistant_message = useCallback(
+    (message_id: string, content: string) => {
+      set_messages((prev) =>
+        prev.map((message) =>
+          message.id === message_id ? { ...message, content } : message
+        )
+      )
+    },
+    []
+  )
 
-  const speak_response = useCallback((text: string, on_progress?: (visible_text: string) => void): Promise<void> => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return Promise.resolve()
+  const speak_response = useCallback(
+    (
+      text: string,
+      on_progress?: (visible_text: string) => void
+    ): Promise<void> => {
+      if (typeof window === "undefined" || !window.speechSynthesis)
+        return Promise.resolve()
 
-    return new Promise((resolve) => {
-      window.speechSynthesis.cancel()
+      return new Promise((resolve) => {
+        window.speechSynthesis.cancel()
 
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = locale_for_language(selected_language_ref.current)
-      utterance.rate = 0.96
-      utterance.pitch = 1.02
-      let last_visible_text = ""
-      let fallback_interval: number | null = null
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.lang = locale_for_language(selected_language_ref.current)
+        utterance.rate = 0.96
+        utterance.pitch = 1.02
+        let last_visible_text = ""
+        let fallback_interval: number | null = null
 
-      const update_visible_text = (visible_text: string) => {
-        if (!on_progress || visible_text === last_visible_text) return
-        last_visible_text = visible_text
-        on_progress(visible_text)
-      }
-
-      const finish = () => {
-        if (fallback_interval !== null) {
-          window.clearInterval(fallback_interval)
-          fallback_interval = null
+        const update_visible_text = (visible_text: string) => {
+          if (!on_progress || visible_text === last_visible_text) return
+          last_visible_text = visible_text
+          on_progress(visible_text)
         }
-        update_visible_text(text)
-        speaking_ref.current = false
-        set_speaking(false)
-        resolve()
-      }
 
-      utterance.onstart = () => {
-        speaking_ref.current = true
-        set_speaking(true)
-        set_voice_status("Ubuntu Voice is responding. I will listen again when the reply ends.")
-        const started_at = window.performance.now()
-        fallback_interval = window.setInterval(() => {
-          const elapsed_seconds = (window.performance.now() - started_at) / 1000
-          const estimated_chars = Math.max(1, Math.floor(elapsed_seconds * 18 * utterance.rate))
-          update_visible_text(reveal_text_at_boundary(text, estimated_chars))
-        }, 120)
-      }
-      utterance.onboundary = (event) => {
-        if (typeof event.charIndex !== "number") return
-        update_visible_text(reveal_text_at_boundary(text, event.charIndex))
-      }
-      utterance.onend = finish
-      utterance.onerror = finish
+        const finish = () => {
+          if (fallback_interval !== null) {
+            window.clearInterval(fallback_interval)
+            fallback_interval = null
+          }
+          update_visible_text(text)
+          speaking_ref.current = false
+          set_speaking(false)
+          resolve()
+        }
 
-      window.speechSynthesis.speak(utterance)
-    })
-  }, [])
+        utterance.onstart = () => {
+          speaking_ref.current = true
+          set_speaking(true)
+          set_voice_status(
+            "Ubuntu Voice is responding. I will listen again when the reply ends."
+          )
+          const started_at = window.performance.now()
+          fallback_interval = window.setInterval(() => {
+            const elapsed_seconds =
+              (window.performance.now() - started_at) / 1000
+            const estimated_chars = Math.max(
+              1,
+              Math.floor(elapsed_seconds * 18 * utterance.rate)
+            )
+            update_visible_text(reveal_text_at_boundary(text, estimated_chars))
+          }, 120)
+        }
+        utterance.onboundary = (event) => {
+          if (typeof event.charIndex !== "number") return
+          update_visible_text(reveal_text_at_boundary(text, event.charIndex))
+        }
+        utterance.onend = finish
+        utterance.onerror = finish
+
+        window.speechSynthesis.speak(utterance)
+      })
+    },
+    []
+  )
 
   const disable_voice_mode = useCallback(() => {
     clear_listen_retry()
@@ -460,7 +524,10 @@ export default function ChatPage() {
   }, [clear_listen_retry, stop_current_recognition])
 
   const send_message = useCallback(
-    async (message_text?: string, options: SendMessageOptions = {}): Promise<AgentChatResponse | null> => {
+    async (
+      message_text?: string,
+      options: SendMessageOptions = {}
+    ): Promise<AgentChatResponse | null> => {
       const show_assistant_reply = options.show_assistant_reply ?? true
       const show_user_message = options.show_user_message ?? true
       const text = (message_text ?? draft).trim()
@@ -487,7 +554,12 @@ export default function ChatPage() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ company_id, message: text, language: selected_language_ref.current, history }),
+          body: JSON.stringify({
+            company_id,
+            message: text,
+            language: selected_language_ref.current,
+            history,
+          }),
         })
 
         const data: unknown = await res.json().catch(() => ({}))
@@ -504,7 +576,8 @@ export default function ChatPage() {
           return null
         }
 
-        const grounded = typeof parsed.grounded === "boolean" ? parsed.grounded : null
+        const grounded =
+          typeof parsed.grounded === "boolean" ? parsed.grounded : null
 
         if (show_assistant_reply) append_assistant_message(reply_text, grounded)
 
@@ -517,7 +590,7 @@ export default function ChatPage() {
         set_pending(false)
       }
     },
-    [append_assistant_message, draft, messages],
+    [append_assistant_message, draft, messages]
   )
 
   const handle_voice_transcript = useCallback(
@@ -532,34 +605,61 @@ export default function ChatPage() {
       set_voice_error(null)
       set_voice_status("Processing your question from voice...")
 
-      const response = await send_message(spoken_text, { show_assistant_reply: false, show_user_message: true })
+      const response = await send_message(spoken_text, {
+        show_assistant_reply: false,
+        show_user_message: true,
+      })
       if (!voice_mode_enabled_ref.current) return
 
       if (!response?.reply) {
-        set_voice_status("I could not complete that turn. I am ready to listen again.")
+        set_voice_status(
+          "I could not complete that turn. I am ready to listen again."
+        )
         queue_listen_restart(900)
         return
       }
 
-      const assistant_message_id = append_assistant_message("", response.grounded ?? null)
-      await speak_response(response.reply, (visible_text) => update_assistant_message(assistant_message_id, visible_text))
+      const assistant_message_id = append_assistant_message(
+        "",
+        response.grounded ?? null
+      )
+      await speak_response(response.reply, (visible_text) =>
+        update_assistant_message(assistant_message_id, visible_text)
+      )
 
       if (!voice_mode_enabled_ref.current) return
-      set_voice_status("Ready for your next question. Speak when the microphone starts.")
+      set_voice_status(
+        "Ready for your next question. Speak when the microphone starts."
+      )
       manual_stop_ref.current = false
       queue_listen_restart(500)
     },
-    [append_assistant_message, clear_listen_retry, queue_listen_restart, send_message, speak_response, update_assistant_message],
+    [
+      append_assistant_message,
+      clear_listen_retry,
+      queue_listen_restart,
+      send_message,
+      speak_response,
+      update_assistant_message,
+    ]
   )
 
   const start_listening = useCallback(() => {
     clear_listen_retry()
-    if (!voice_mode_enabled_ref.current || listening_ref.current || pending_ref.current || speaking_ref.current) return
+    if (
+      !voice_mode_enabled_ref.current ||
+      listening_ref.current ||
+      pending_ref.current ||
+      speaking_ref.current
+    )
+      return
 
     const Recognition = get_speech_recognition_constructor()
     if (!Recognition || !browser_speech_is_supported()) {
       set_speech_supported(false)
-      set_voice_error("Voice mode needs a Chromium-based browser with SpeechRecognition and SpeechSynthesis.")
+      set_voice_error(
+        "Voice mode needs a Chromium-based browser with SpeechRecognition and SpeechSynthesis."
+      )
       disable_voice_mode()
       return
     }
@@ -586,14 +686,20 @@ export default function ChatPage() {
     recognition.onstart = () => {
       listening_ref.current = true
       set_listening(true)
-      set_voice_status("Listening... pause when you are done and I will respond.")
+      set_voice_status(
+        "Listening... pause when you are done and I will respond."
+      )
     }
 
     recognition.onresult = (event: BrowserSpeechRecognitionEvent) => {
       let interim_text = ""
       let final_text = final_transcript_ref.current
 
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      for (
+        let index = event.resultIndex;
+        index < event.results.length;
+        index += 1
+      ) {
         const result = event.results[index]
         const transcript = result?.[0]?.transcript.trim() ?? ""
         if (!transcript) continue
@@ -617,7 +723,10 @@ export default function ChatPage() {
       if (event.error !== "no-speech") set_voice_error(message)
       set_voice_status(message)
 
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed"
+      ) {
         voice_mode_enabled_ref.current = false
         set_voice_mode_enabled(false)
         manual_stop_ref.current = true
@@ -625,15 +734,20 @@ export default function ChatPage() {
     }
 
     recognition.onend = () => {
-      if (recognition_ref.current === recognition) recognition_ref.current = null
+      if (recognition_ref.current === recognition)
+        recognition_ref.current = null
       listening_ref.current = false
       set_listening(false)
 
-      const spoken_text = (final_transcript_ref.current || live_transcript_ref.current).trim()
+      const spoken_text = (
+        final_transcript_ref.current || live_transcript_ref.current
+      ).trim()
       if (!voice_mode_enabled_ref.current || manual_stop_ref.current) return
 
       if (spoken_text) {
-        set_voice_status("Got it. Listening is paused while I prepare the response.")
+        set_voice_status(
+          "Got it. Listening is paused while I prepare the response."
+        )
         handle_voice_transcript_ref.current(spoken_text)
         return
       }
@@ -650,7 +764,9 @@ export default function ChatPage() {
       recognition_ref.current = null
       listening_ref.current = false
       set_listening(false)
-      set_voice_error("Voice mode is already active. Please wait a moment and try again.")
+      set_voice_error(
+        "Voice mode is already active. Please wait a moment and try again."
+      )
     }
   }, [clear_listen_retry, disable_voice_mode, queue_listen_restart])
 
@@ -659,7 +775,9 @@ export default function ChatPage() {
     set_speech_supported(supported)
 
     if (!supported) {
-      set_voice_error("Voice mode needs a Chromium-based browser with microphone speech recognition.")
+      set_voice_error(
+        "Voice mode needs a Chromium-based browser with microphone speech recognition."
+      )
       set_voice_status("Voice mode is unavailable in this browser.")
       return
     }
@@ -675,7 +793,9 @@ export default function ChatPage() {
     manual_stop_ref.current = false
     voice_mode_enabled_ref.current = true
     set_voice_mode_enabled(true)
-    set_voice_status("Voice mode is on. The microphone will start listening now.")
+    set_voice_status(
+      "Voice mode is on. The microphone will start listening now."
+    )
     queue_listen_restart(200)
   }, [queue_listen_restart])
 
@@ -697,8 +817,13 @@ export default function ChatPage() {
 
     manual_stop_ref.current = false
     if (response?.reply) {
-      const assistant_message_id = append_assistant_message("", response.grounded ?? null)
-      await speak_response(response.reply, (visible_text) => update_assistant_message(assistant_message_id, visible_text))
+      const assistant_message_id = append_assistant_message(
+        "",
+        response.grounded ?? null
+      )
+      await speak_response(response.reply, (visible_text) =>
+        update_assistant_message(assistant_message_id, visible_text)
+      )
     }
     if (voice_mode_enabled_ref.current) queue_listen_restart(500)
   }, [
@@ -810,7 +935,7 @@ export default function ChatPage() {
         set_voice_status(
           selected_company_id
             ? "Knowledge base changed. Voice mode will listen again in a moment."
-            : "Select a knowledge base before using voice mode.",
+            : "Select a knowledge base before using voice mode."
         )
         if (selected_company_id) {
           manual_stop_ref.current = false
@@ -845,7 +970,7 @@ export default function ChatPage() {
       event.preventDefault()
       void send_typed_message()
     },
-    [send_typed_message],
+    [send_typed_message]
   )
 
   const handle_language_change = useCallback(
@@ -853,7 +978,9 @@ export default function ChatPage() {
       selected_language_ref.current = language
       set_selected_language(language)
       if (!voice_mode_enabled_ref.current) return
-      set_voice_status(`Language changed to ${language}. Voice mode will use it from the next turn.`)
+      set_voice_status(
+        `Language changed to ${language}. Voice mode will use it from the next turn.`
+      )
       if (listening_ref.current) {
         manual_stop_ref.current = true
         stop_current_recognition(true)
@@ -863,11 +990,14 @@ export default function ChatPage() {
         queue_listen_restart(300)
       }
     },
-    [queue_listen_restart, stop_current_recognition],
+    [queue_listen_restart, stop_current_recognition]
   )
 
-  const voice_control_disabled = page_loading || (!selected_company_id && !voice_mode_enabled)
-  const voice_button_label = voice_mode_enabled ? "Turn off voice mode" : "Turn on voice mode"
+  const voice_control_disabled =
+    page_loading || (!selected_company_id && !voice_mode_enabled)
+  const voice_button_label = voice_mode_enabled
+    ? "Turn off voice mode"
+    : "Turn on voice mode"
   const voice_state_label = voice_mode_enabled
     ? listening
       ? "Listening"
@@ -878,8 +1008,12 @@ export default function ChatPage() {
           : "Ready"
     : "Off"
   const voice_panel_status =
-    voice_error ?? (speech_supported === false ? "Voice mode is unavailable in this browser." : voice_status)
-  const can_send = !pending && Boolean(draft.trim()) && Boolean(selected_company_id)
+    voice_error ??
+    (speech_supported === false
+      ? "Voice mode is unavailable in this browser."
+      : voice_status)
+  const can_send =
+    !pending && Boolean(draft.trim()) && Boolean(selected_company_id)
 
   return (
     <div className="relative flex min-h-svh flex-col overflow-hidden bg-[#f7f9fc] text-[#061b3b]">
@@ -889,12 +1023,18 @@ export default function ChatPage() {
       />
 
       <AppNavbar is_signed_in />
-      <header className="hidden sticky top-0 z-20 border-b border-[#dce4ef] bg-white px-4 shadow-sm">
+      <header className="sticky top-0 z-20 hidden border-b border-[#dce4ef] bg-white px-4 shadow-sm">
         <div className="mx-auto flex h-[66px] max-w-[1840px] items-center gap-3">
-          <Link href="/" className="hidden shrink-0 items-center gap-2 text-[#607694] sm:flex">
+          <Link
+            href="/"
+            className="hidden shrink-0 items-center gap-2 text-[#607694] sm:flex"
+          >
             <span className="text-xl">⌂</span> Home
           </Link>
-          <Link href="/" className="flex min-w-0 items-center gap-2 rounded-full bg-gradient-to-r from-[#2864e8] to-[#24479c] px-4 py-2 text-white transition-opacity hover:opacity-90">
+          <Link
+            href="/"
+            className="flex min-w-0 items-center gap-2 rounded-full bg-gradient-to-r from-[#2864e8] to-[#24479c] px-4 py-2 text-white transition-opacity hover:opacity-90"
+          >
             <Image
               src="/ub_voice.png"
               alt="Ubuntu Voice"
@@ -905,15 +1045,32 @@ export default function ChatPage() {
             />
             <span className="font-semibold">Ubuntu Voice</span>
           </Link>
-          <span className="hidden rounded-xl bg-[#eef5ff] px-4 py-2 text-[#2864e8] sm:inline-flex">Chat</span>
+          <span className="hidden rounded-xl bg-[#eef5ff] px-4 py-2 text-[#2864e8] sm:inline-flex">
+            Chat
+          </span>
           <div className="flex-1" />
-          <Button variant="outline" size="sm" className="hidden rounded-full border-[#dce4ef] text-[#607694] sm:inline-flex" asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden rounded-full border-[#dce4ef] text-[#607694] sm:inline-flex"
+            asChild
+          >
             <Link href="/documents">Create agent</Link>
           </Button>
-          <Button variant="outline" size="sm" className="hidden rounded-full border-[#dce4ef] text-[#607694] sm:inline-flex" asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden rounded-full border-[#dce4ef] text-[#607694] sm:inline-flex"
+            asChild
+          >
             <Link href="/statistics">Statistics</Link>
           </Button>
-          <Button variant="outline" size="sm" className="rounded-full border-[#dce4ef] text-[#607694]" asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full border-[#dce4ef] text-[#607694]"
+            asChild
+          >
             <Link href="/logout">Logout</Link>
           </Button>
         </div>
@@ -933,27 +1090,71 @@ export default function ChatPage() {
                     "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
                     voice_mode_enabled
                       ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                      : "border border-[#dce4ef] bg-white text-[#8aa0bd]",
+                      : "border border-[#dce4ef] bg-white text-[#8aa0bd]"
                   )}
                 >
-                  {voice_mode_enabled ? <Mic className="size-3.5" aria-hidden /> : <MicOff className="size-3.5" aria-hidden />}
+                  {voice_mode_enabled ? (
+                    <Mic className="size-3.5" aria-hidden />
+                  ) : (
+                    <MicOff className="size-3.5" aria-hidden />
+                  )}
                   Voice {voice_state_label}
                 </span>
               </div>
-              <h1 className="mt-2 text-2xl font-semibold text-[#1E3A8A]">Ubuntu Voice chat</h1>
-              {page_loading ? <p className="mt-1 inline-flex items-center gap-2 text-sm text-[#607694]"><Loader2 className="size-3.5 animate-spin" aria-hidden />Loading agents...</p> : companies.length === 0 ? <p className="mt-1 text-sm text-[#607694]">No agents yet. <Link href="/documents" className="font-medium text-[#2563EB] hover:underline">Create one to start chatting.</Link></p> : <label className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#607694]">Chat with<select id="chat-company" value={selected_company_id ?? ""} onChange={(e) => set_selected_company_id(e.target.value || null)} className="h-10 w-48 max-w-full rounded-lg border border-[#dce4ef] bg-white px-2 text-sm font-medium text-[#123f88] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20">{companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select></label>}
+              <h1 className="mt-2 text-2xl font-semibold text-[#1E3A8A]">
+                Ubuntu Voice chat
+              </h1>
+              {page_loading ? (
+                <p className="mt-1 inline-flex items-center gap-2 text-sm text-[#607694]">
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                  Loading agents...
+                </p>
+              ) : companies.length === 0 ? (
+                <p className="mt-1 text-sm text-[#607694]">
+                  No agents yet.{" "}
+                  <Link
+                    href="/documents"
+                    className="font-medium text-[#2563EB] hover:underline"
+                  >
+                    Create one to start chatting.
+                  </Link>
+                </p>
+              ) : (
+                <label className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#607694]">
+                  Chat with
+                  <select
+                    id="chat-company"
+                    value={selected_company_id ?? ""}
+                    onChange={(e) =>
+                      set_selected_company_id(e.target.value || null)
+                    }
+                    className="h-10 w-48 max-w-full rounded-lg border border-[#dce4ef] bg-white px-2 text-sm font-medium text-[#123f88] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20"
+                  >
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
             <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <label htmlFor="chat-language" className="sr-only">
                 Response language
               </label>
               <div className="relative">
-                <Globe2 className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <Globe2
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
                 <select
                   id="chat-language"
                   value={selected_language}
-                  onChange={(event) => handle_language_change(event.target.value as ChatLanguage)}
-                  className="h-10 w-full rounded-lg border border-[#dce4ef] bg-white pl-8 pr-7 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 sm:w-48"
+                  onChange={(event) =>
+                    handle_language_change(event.target.value as ChatLanguage)
+                  }
+                  className="h-10 w-full rounded-lg border border-[#dce4ef] bg-white pr-7 pl-8 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 sm:w-48"
                 >
                   {language_options.map((option) => (
                     <option key={option.label} value={option.label}>
@@ -962,45 +1163,75 @@ export default function ChatPage() {
                   ))}
                 </select>
               </div>
-              <Button variant="outline" size="lg" className="w-full shrink-0 rounded-full border-[#dce4ef] text-[#607694] sm:w-auto" asChild>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full shrink-0 rounded-full border-[#dce4ef] text-[#607694] sm:w-auto"
+                asChild
+              >
                 <Link href="/documents">Manage documents</Link>
               </Button>
             </div>
           </div>
 
-          <div ref={chat_scroll_ref} className={cn("min-h-0 flex-1 space-y-4 bg-[#f7f9fc] px-4 py-5 sm:px-8 sm:py-7 lg:px-12", messages.length === 0 ? "overflow-hidden" : "overflow-y-auto")}>
+          <div
+            ref={chat_scroll_ref}
+            className={cn(
+              "min-h-0 flex-1 space-y-4 bg-[#f7f9fc] px-4 py-5 sm:px-8 sm:py-7 lg:px-12",
+              messages.length === 0 ? "overflow-hidden" : "overflow-y-auto"
+            )}
+          >
             {messages.length === 0 ? (
-              <div className="relative flex min-h-[20rem] flex-1 items-center justify-center overflow-hidden px-6 pb-10 pt-16 text-center sm:min-h-[22rem] sm:px-12 sm:pt-20 lg:min-h-[24rem] lg:px-24">
+              <div className="relative flex min-h-[20rem] flex-1 items-center justify-center overflow-hidden px-6 pt-16 pb-10 text-center sm:min-h-[22rem] sm:px-12 sm:pt-20 lg:min-h-0 lg:px-12 lg:py-6">
                 <EmergencyBackground />
                 <div className="relative z-10 flex flex-col items-center">
-                  <div className="mb-8 flex size-28 items-center justify-center rounded-full bg-[#dbeafe] shadow-sm ring-8 ring-[#eff6ff]">
-                    <div className="ubuntu-chat-float flex size-24 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-md">
-                      <Megaphone className="size-12" strokeWidth={2.25} aria-hidden />
+                  <div className="mb-8 flex size-28 items-center justify-center rounded-full bg-[#dbeafe] shadow-sm ring-8 ring-[#eff6ff] lg:mb-4 lg:size-24">
+                    <div className="ubuntu-chat-float flex size-24 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-md lg:size-20">
+                      <Megaphone
+                        className="size-12 lg:size-10"
+                        strokeWidth={2.25}
+                        aria-hidden
+                      />
                     </div>
                   </div>
-                  <h2 className="text-balance text-2xl font-semibold text-[#1E3A8A]">Report Emergencies. Find Help. Stay Safe.</h2>
+                  <h2 className="text-2xl font-semibold text-balance text-[#1E3A8A]">
+                    Report Emergencies. Find Help. Stay Safe.
+                  </h2>
                   <p className="mt-4 max-w-xl text-center text-lg leading-relaxed text-[#607694]">
-                    Quickly report incidents, request assistance, and access trusted support for you and your community.
+                    Quickly report incidents, request assistance, and access
+                    trusted support for you and your community.
                   </p>
-                  <div className="mt-7 flex items-end gap-1.5" aria-label="Ubuntu Voice is ready">
+                  <div
+                    className="mt-7 flex items-end gap-1.5"
+                    aria-label="Ubuntu Voice is ready"
+                  >
                     <span className="ubuntu-chat-dot h-2 w-2 rounded-full bg-[#2563EB]" />
                     <span className="ubuntu-chat-dot h-2 w-2 rounded-full bg-[#60A5FA] [animation-delay:160ms]" />
                     <span className="ubuntu-chat-dot h-2 w-2 rounded-full bg-[#1E3A8A] [animation-delay:320ms]" />
                   </div>
                 </div>
               </div>
-            ) : messages.map((m) => (
+            ) : (
+              messages.map((m) => (
                 <div
                   key={m.id}
-                  className={cn("flex flex-col gap-1.5", m.role === "user" ? "items-end" : "items-start")}
+                  className={cn(
+                    "flex flex-col gap-1.5",
+                    m.role === "user" ? "items-end" : "items-start"
+                  )}
                 >
-                  <div className={cn("flex max-w-[88%] items-start gap-2", m.role === "user" && "flex-row-reverse")}>
+                  <div
+                    className={cn(
+                      "flex max-w-[88%] items-start gap-2",
+                      m.role === "user" && "flex-row-reverse"
+                    )}
+                  >
                     <div
                       className={cn(
                         "mt-1 flex size-7 shrink-0 items-center justify-center rounded-full",
                         m.role === "user"
                           ? "bg-primary text-primary-foreground"
-                          : "border border-border bg-background text-primary",
+                          : "border border-border bg-background text-primary"
                       )}
                     >
                       {m.role === "user" ? (
@@ -1014,7 +1245,7 @@ export default function ChatPage() {
                         "rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap shadow-sm",
                         m.role === "user"
                           ? "rounded-tr-md bg-primary text-primary-foreground"
-                          : "rounded-tl-md border border-border/80 bg-background text-foreground",
+                          : "rounded-tl-md border border-border/80 bg-background text-foreground"
                       )}
                     >
                       {m.content || (
@@ -1032,14 +1263,17 @@ export default function ChatPage() {
                         "ml-9 rounded-full px-2 py-0.5 text-[10px] font-medium",
                         m.grounded
                           ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                          : "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+                          : "bg-amber-500/15 text-amber-800 dark:text-amber-300"
                       )}
                     >
-                      {m.grounded ? "From trusted documents" : "No close match in trusted documents"}
+                      {m.grounded
+                        ? "From trusted documents"
+                        : "No close match in trusted documents"}
                     </span>
                   )}
                 </div>
-              ))}
+              ))
+            )}
             <div ref={list_end_ref} />
           </div>
 
@@ -1061,7 +1295,10 @@ export default function ChatPage() {
             </div>
           ) : null}
 
-          <form className="border-t border-[#dce4ef] bg-white px-4 py-4 sm:px-8 lg:px-12" onSubmit={handle_text_submit}>
+          <form
+            className="border-t border-[#dce4ef] bg-white px-4 py-4 sm:px-8 lg:px-12"
+            onSubmit={handle_text_submit}
+          >
             <label htmlFor="chat-input" className="sr-only">
               Message
             </label>
@@ -1085,7 +1322,7 @@ export default function ChatPage() {
                       : "Ask Ubuntu Voice..."
                     : "Select a knowledge base first..."
                 }
-                className="ubuntu-chat-input h-[5.5rem] w-full resize-none overflow-y-auto rounded-2xl border border-[#dce4ef] bg-white px-4 py-3 pb-12 pl-12 pr-14 text-lg shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-[#8aa0bd] focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20 disabled:opacity-50"
+                className="ubuntu-chat-input h-[5.5rem] w-full resize-none overflow-y-auto rounded-2xl border border-[#dce4ef] bg-white px-4 py-3 pr-14 pb-12 pl-12 text-lg shadow-sm transition-[border-color,box-shadow] outline-none placeholder:text-[#8aa0bd] focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20 disabled:opacity-50"
               />
               <Button
                 type="button"
@@ -1093,19 +1330,23 @@ export default function ChatPage() {
                 size="icon-sm"
                 className={cn(
                   "absolute bottom-3 left-3 size-8 rounded-full shadow-sm",
-                  voice_mode_enabled && "shadow-primary/20",
+                  voice_mode_enabled && "shadow-primary/20"
                 )}
                 disabled={voice_control_disabled}
                 onClick={handle_voice_toggle}
                 aria-label={voice_button_label}
                 title={voice_button_label}
               >
-                {voice_mode_enabled ? <MicOff className="size-4" aria-hidden /> : <Mic className="size-4" aria-hidden />}
+                {voice_mode_enabled ? (
+                  <MicOff className="size-4" aria-hidden />
+                ) : (
+                  <Mic className="size-4" aria-hidden />
+                )}
               </Button>
               <Button
                 type="submit"
                 size="icon-sm"
-                className="absolute bottom-3 right-3 size-12 rounded-full bg-[#2864e8] text-white hover:bg-[#1f56ce]"
+                className="absolute right-3 bottom-3 size-12 rounded-full bg-[#2864e8] text-white hover:bg-[#1f56ce]"
                 disabled={!can_send}
                 aria-label="Send message"
                 title="Send message"
@@ -1117,8 +1358,11 @@ export default function ChatPage() {
                 )}
               </Button>
             </div>
-            {!voice_mode_enabled && (voice_error || speech_supported === false) ? (
-              <p className="mt-2 px-1 text-xs leading-relaxed text-destructive">{voice_panel_status}</p>
+            {!voice_mode_enabled &&
+            (voice_error || speech_supported === false) ? (
+              <p className="mt-2 px-1 text-xs leading-relaxed text-destructive">
+                {voice_panel_status}
+              </p>
             ) : null}
           </form>
         </section>
