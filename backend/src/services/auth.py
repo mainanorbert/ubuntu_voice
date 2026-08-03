@@ -1,9 +1,16 @@
-"""Account creation, linking, and Google OAuth helpers."""
+"""Account creation, recovery, linking, and Google OAuth helpers."""
 
+import asyncio
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from html import escape
+import hashlib
+import secrets
 
 import httpx
 from fastapi import HTTPException, status
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -85,6 +92,59 @@ def authenticate_manual_user(session: Session, *, email: str, password: str) -> 
     if user is None or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
     return user
+
+
+def issue_password_reset_token(user: User) -> str:
+    """Create a short-lived single-use reset token and store only its hash."""
+    token = secrets.token_urlsafe(32)
+    user.password_reset_token_hash = _hash_password_reset_token(token)
+    user.password_reset_expires_at = datetime.now(UTC) + timedelta(minutes=30)
+    return token
+
+
+async def send_password_reset_email(
+    *,
+    sendgrid_api_key: str,
+    sender_email: str,
+    recipient_email: str,
+    reset_url: str,
+) -> None:
+    """Deliver a password-reset link without exposing the token in application logs."""
+    message = Mail(
+        from_email=sender_email,
+        to_emails=recipient_email,
+        subject="Reset your Ubuntu Voice password",
+        html_content=(
+            "<p>We received a request to reset your Ubuntu Voice password.</p>"
+            f'<p><a href="{escape(reset_url, quote=True)}">Reset your password</a></p>'
+            "<p>This link expires in 30 minutes and can be used once. If you did not request this, you can ignore this email.</p>"
+        ),
+    )
+
+    def send_message():
+        return SendGridAPIClient(sendgrid_api_key).send(message)
+
+    response = await asyncio.to_thread(send_message)
+    if response.status_code >= 400:
+        raise RuntimeError(f"SendGrid email delivery failed with status {response.status_code}.")
+
+
+def reset_password(session: Session, *, token: str, password: str) -> None:
+    """Replace a password when presented with a valid, unexpired reset token."""
+    token_hash = _hash_password_reset_token(token)
+    user = session.query(User).filter(User.password_reset_token_hash == token_hash).with_for_update().one_or_none()
+    now = datetime.now(UTC)
+    if user is None or user.password_reset_expires_at is None or user.password_reset_expires_at <= now:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This password reset link is invalid or has expired.")
+    user.password_hash = hash_password(password)
+    user.password_reset_token_hash = None
+    user.password_reset_expires_at = None
+    session.flush()
+
+
+def _hash_password_reset_token(token: str) -> str:
+    """Create a non-reversible database value for a reset token."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def upsert_google_user(session: Session, *, profile: GoogleProfile) -> User:

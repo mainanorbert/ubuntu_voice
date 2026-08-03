@@ -224,3 +224,60 @@
 .ubuntu-voice-ring {
   animation: ubuntu-voice-ring 1900ms ease-out infinite;
 }
+
+@keyframes ubuntu-chat-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes ubuntu-chat-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ubuntu-chat-dot {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-6px);
+  }
+}
+
+.ubuntu-chat-float {
+  animation: ubuntu-chat-float 2400ms ease-in-out infinite;
+}
+
+.ubuntu-chat-orbit {
+  animation: ubuntu-chat-orbit 12s linear infinite;
+}
+
+.ubuntu-chat-dot {
+  animation: ubuntu-chat-dot 1100ms ease-in-out infinite;
+}
+
+.ubuntu-chat-input {
+  scrollbar-width: none;
+}
+
+.ubuntu-chat-input::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ubuntu-chat-float,
+  .ubuntu-chat-orbit,
+  .ubuntu-chat-dot,
+  .ubuntu-voice-ring {
+    animation: none;
+  }
+}

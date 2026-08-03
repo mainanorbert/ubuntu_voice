@@ -8,7 +8,7 @@ import {
   BrainCircuit,
   Globe2,
   Loader2,
-  MessageCircle,
+  Megaphone,
   Mic,
   MicOff,
   SendHorizontal,
@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { AppNavbar } from "@/components/app-navbar"
+import { EmergencyBackground } from "@/components/emergency-background"
 
 type ChatRole = "user" | "assistant"
 
@@ -918,80 +919,9 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto grid w-full max-w-[1840px] flex-1 gap-0 lg:grid-cols-[384px_minmax(0,1fr)]">
-        <aside className="flex flex-col gap-4 border-b border-[#dce4ef] p-4 lg:border-b-0 lg:border-r lg:p-5">
-          <section className="rounded-2xl border border-[#dce4ef] bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#061b3b]">
-              <span className="rounded-lg bg-[#eef5ff] p-2">📄</span>
-              Available Agents
-            </div>
-            {page_loading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-                Loading knowledge bases...
-              </div>
-            ) : companies.length === 0 ? (
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                No knowledge bases yet.{" "}
-                <Link href="/documents" className="font-medium text-primary underline-offset-4 hover:underline">
-                  Create an agent and upload PDFs
-                </Link>{" "}
-                before chatting.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <label htmlFor="chat-company" className="sr-only">
-                  Select knowledge base for RAG
-                </label>
-                <select
-                  id="chat-company"
-                  value={selected_company_id ?? ""}
-                  onChange={(e) => set_selected_company_id(e.target.value || null)}
-                  className="h-14 w-full rounded-xl border border-[#dce4ef] bg-white px-4 text-lg outline-none focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20"
-                >
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                {selected_company && (
-                  <div className="text-xs leading-relaxed text-muted-foreground">
-                    <p>
-                      Retrieval is scoped to{" "}
-                      <span className="font-medium text-foreground">{selected_company.name}</span>
-                      &apos;s embedded documents.
-                    </p>
-                    {selected_company.description ? (
-                      <p className="mt-1">{selected_company.description}</p>
-                    ) : null}
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-2xl border border-[#dce4ef] bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-2 text-lg font-semibold text-[#061b3b]">
-              <span className="rounded-lg bg-[#eef5ff] p-2">🛡️</span>
-              Safety scope
-            </div>
-            <p className="mt-3 text-lg leading-relaxed text-[#607694]">
-              Privacy-first support for displaced people, women, youth, civil society teams, and local peacebuilders.
-            </p>
-            <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <span className="rounded-full bg-[#dff5ee] px-3 py-2 font-medium text-[#178574]">
-                Grounded
-              </span>
-              <span className="rounded-full bg-[#eef5ff] px-3 py-2 font-medium text-[#2864e8]">
-                Low-bandwidth
-              </span>
-            </div>
-          </section>
-        </aside>
-
-        <section className="flex min-h-[calc(100svh-20rem)] min-w-0 flex-col overflow-hidden bg-[#f7f9fc] lg:h-[calc(100svh-66px)]">
-          <div className="flex flex-col gap-3 border-b border-[#dce4ef] bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-9">
+      <main className="relative z-10 flex w-full flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-10">
+        <section className="mx-auto flex min-h-[calc(100svh-100px)] w-full max-w-[1120px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#dce4ef] bg-[#f7f9fc] shadow-sm lg:h-[calc(100svh-116px)]">
+          <div className="flex flex-col gap-3 border-b border-[#dce4ef] bg-white px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6 lg:px-8">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef5ff] px-3 py-2 text-sm font-medium text-[#2864e8]">
@@ -1010,9 +940,8 @@ export default function ChatPage() {
                   Voice {voice_state_label}
                 </span>
               </div>
-              <h1 className="mt-2 truncate text-2xl font-semibold text-[#061b3b]">
-                {selected_company ? selected_company.name : "Ubuntu Voice chat"}
-              </h1>
+              <h1 className="mt-2 text-2xl font-semibold text-[#1E3A8A]">Ubuntu Voice chat</h1>
+              {page_loading ? <p className="mt-1 inline-flex items-center gap-2 text-sm text-[#607694]"><Loader2 className="size-3.5 animate-spin" aria-hidden />Loading agents...</p> : companies.length === 0 ? <p className="mt-1 text-sm text-[#607694]">No agents yet. <Link href="/documents" className="font-medium text-[#2563EB] hover:underline">Create one to start chatting.</Link></p> : <label className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#607694]">Chat with<select id="chat-company" value={selected_company_id ?? ""} onChange={(e) => set_selected_company_id(e.target.value || null)} className="h-10 w-48 max-w-full rounded-lg border border-[#dce4ef] bg-white px-2 text-sm font-medium text-[#123f88] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20">{companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select></label>}
             </div>
             <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <label htmlFor="chat-language" className="sr-only">
@@ -1024,7 +953,7 @@ export default function ChatPage() {
                   id="chat-language"
                   value={selected_language}
                   onChange={(event) => handle_language_change(event.target.value as ChatLanguage)}
-                  className="h-12 w-full rounded-full border border-[#dce4ef] bg-white pl-4 pr-7 text-lg outline-none focus:border-[#2864e8] sm:w-[9rem]"
+                  className="h-10 w-full rounded-lg border border-[#dce4ef] bg-white pl-8 pr-7 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 sm:w-48"
                 >
                   {language_options.map((option) => (
                     <option key={option.label} value={option.label}>
@@ -1039,21 +968,28 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div ref={chat_scroll_ref} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[#f7f9fc] p-5 lg:p-9">
+          <div ref={chat_scroll_ref} className={cn("min-h-0 flex-1 space-y-4 bg-[#f7f9fc] px-4 py-5 sm:px-8 sm:py-7 lg:px-12", messages.length === 0 ? "overflow-hidden" : "overflow-y-auto")}>
             {messages.length === 0 ? (
-              <div className="flex min-h-full flex-col items-center justify-center px-3 py-16 text-center">
-                <div className="mb-4 flex size-20 items-center justify-center rounded-2xl bg-[#e8f1ff] text-[#2864e8] shadow-sm">
-                  <MessageCircle className="size-6" aria-hidden />
+              <div className="relative flex min-h-[20rem] flex-1 items-center justify-center overflow-hidden px-6 pb-10 pt-16 text-center sm:min-h-[22rem] sm:px-12 sm:pt-20 lg:min-h-[24rem] lg:px-24">
+                <EmergencyBackground />
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="mb-8 flex size-28 items-center justify-center rounded-full bg-[#dbeafe] shadow-sm ring-8 ring-[#eff6ff]">
+                    <div className="ubuntu-chat-float flex size-24 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-md">
+                      <Megaphone className="size-12" strokeWidth={2.25} aria-hidden />
+                    </div>
+                  </div>
+                  <h2 className="text-balance text-2xl font-semibold text-[#1E3A8A]">Report Emergencies. Find Help. Stay Safe.</h2>
+                  <p className="mt-4 max-w-xl text-center text-lg leading-relaxed text-[#607694]">
+                    Quickly report incidents, request assistance, and access trusted support for you and your community.
+                  </p>
+                  <div className="mt-7 flex items-end gap-1.5" aria-label="Ubuntu Voice is ready">
+                    <span className="ubuntu-chat-dot h-2 w-2 rounded-full bg-[#2563EB]" />
+                    <span className="ubuntu-chat-dot h-2 w-2 rounded-full bg-[#60A5FA] [animation-delay:160ms]" />
+                    <span className="ubuntu-chat-dot h-2 w-2 rounded-full bg-[#1E3A8A] [animation-delay:320ms]" />
+                  </div>
                 </div>
-                <h2 className="text-balance text-2xl font-semibold text-[#061b3b]">Ask from trusted local knowledge</h2>
-                <p className="mt-3 max-w-xl text-center text-lg leading-relaxed text-[#607694]">
-                  {selected_company_id
-                    ? "Use text or voice for practical support questions about services, rights, community resources, and peacebuilding guidance."
-                    : "Select a knowledge base to start a grounded conversation."}
-                </p>
               </div>
-            ) : (
-              messages.map((m) => (
+            ) : messages.map((m) => (
                 <div
                   key={m.id}
                   className={cn("flex flex-col gap-1.5", m.role === "user" ? "items-end" : "items-start")}
@@ -1103,8 +1039,7 @@ export default function ChatPage() {
                     </span>
                   )}
                 </div>
-              ))
-            )}
+              ))}
             <div ref={list_end_ref} />
           </div>
 
@@ -1126,7 +1061,7 @@ export default function ChatPage() {
             </div>
           ) : null}
 
-          <form className="border-t border-[#dce4ef] bg-white p-4 lg:p-5" onSubmit={handle_text_submit}>
+          <form className="border-t border-[#dce4ef] bg-white px-4 py-4 sm:px-8 lg:px-12" onSubmit={handle_text_submit}>
             <label htmlFor="chat-input" className="sr-only">
               Message
             </label>
@@ -1150,7 +1085,7 @@ export default function ChatPage() {
                       : "Ask Ubuntu Voice..."
                     : "Select a knowledge base first..."
                 }
-                className="h-[5.5rem] w-full resize-none rounded-2xl border border-[#dce4ef] bg-white px-4 py-3 pb-12 pl-12 pr-14 text-lg shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-[#8aa0bd] focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20 disabled:opacity-50"
+                className="ubuntu-chat-input h-[5.5rem] w-full resize-none overflow-y-auto rounded-2xl border border-[#dce4ef] bg-white px-4 py-3 pb-12 pl-12 pr-14 text-lg shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-[#8aa0bd] focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20 disabled:opacity-50"
               />
               <Button
                 type="button"

@@ -86,9 +86,9 @@ export default async function Page() {
               </>
             ) : (
               <>
-              <Button size="lg" className="min-w-[260px] rounded-full bg-[#2864e8] px-9 text-lg text-white shadow-md hover:bg-[#1f56ce]" asChild>
+              <Button size="lg" className="min-w-[260px] rounded-full bg-[#DC2626] px-9 text-lg text-white shadow-md hover:bg-[#B91C1C]" asChild>
                 <Link href="/chat">
-                  Open Community chat
+                  Report Emergency
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
               </Button>

@@ -30,7 +30,7 @@ export function ThemeToggle() {
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="shrink-0 text-muted-foreground"
+        className="shrink-0 text-white/80"
         disabled
         aria-hidden
       >
@@ -46,7 +46,7 @@ export function ThemeToggle() {
       type="button"
       variant="ghost"
       size="icon-sm"
-      className="shrink-0 text-muted-foreground hover:text-foreground"
+      className="shrink-0 text-white/80 hover:bg-white/10 hover:text-white"
       onClick={toggle_theme}
       aria-label={is_dark ? "Switch to light mode" : "Switch to dark mode"}
     >

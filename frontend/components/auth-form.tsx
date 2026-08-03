@@ -32,10 +32,38 @@ export function AuthForm({ mode }: AuthFormProps) {
     set_loading(true)
 
     const form = new FormData(event.currentTarget)
+    const email = String(form.get("email") ?? "").trim()
+    const password = String(form.get("password") ?? "")
+    const confirm_password = String(form.get("confirm_password") ?? "")
+
+    if (is_register) {
+      const first_name = String(form.get("first_name") ?? "").trim()
+      const last_name = String(form.get("last_name") ?? "").trim()
+      if (!first_name || !last_name) {
+        set_error("Please enter your first and last name.")
+        set_loading(false)
+        return
+      }
+      if (!is_strong_password(password)) {
+        set_error("Use at least 12 characters with uppercase, lowercase, a number, and a symbol.")
+        set_loading(false)
+        return
+      }
+      if (password !== confirm_password) {
+        set_error("Passwords do not match.")
+        set_loading(false)
+        return
+      }
+    }
     const payload = {
-      email: String(form.get("email") ?? ""),
-      password: String(form.get("password") ?? ""),
-      ...(is_register ? { name: String(form.get("name") ?? "") } : {}),
+      email,
+      password,
+      ...(is_register
+        ? {
+            first_name: String(form.get("first_name") ?? "").trim(),
+            last_name: String(form.get("last_name") ?? "").trim(),
+          }
+        : {}),
     }
 
     try {
@@ -49,7 +77,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         set_error(read_error_message(data))
         return
       }
-      router.replace(search_params.get("next") || "/documents")
+      router.replace("/")
       router.refresh()
     } catch {
       set_error("Could not reach the authentication service.")
@@ -91,15 +119,16 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       <form className="space-y-4" onSubmit={submit}>
         {is_register ? (
-          <label className="block text-sm font-medium text-[#123f88]">
-            Name
-            <input
-              name="name"
-              autoComplete="name"
-              className="mt-2 h-11 w-full rounded-xl border border-[#b9cdeb] bg-white px-3 text-sm outline-none transition focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20"
-              placeholder="Ubuntu Voice user"
-            />
-          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-[#123f88]">
+              First name
+              <input name="first_name" autoComplete="given-name" required maxLength={60} className="mt-2 h-11 w-full rounded-xl border border-[#b9cdeb] bg-white px-3 text-sm outline-none transition focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20" placeholder="Jane" />
+            </label>
+            <label className="block text-sm font-medium text-[#123f88]">
+              Last name
+              <input name="last_name" autoComplete="family-name" required maxLength={60} className="mt-2 h-11 w-full rounded-xl border border-[#b9cdeb] bg-white px-3 text-sm outline-none transition focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20" placeholder="Doe" />
+            </label>
+          </div>
         ) : null}
         <label className="block text-sm font-medium text-[#123f88]">
           Email
@@ -109,7 +138,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             autoComplete="email"
             required
             className="mt-2 h-11 w-full rounded-xl border border-[#b9cdeb] bg-white px-3 text-sm outline-none transition focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20"
-            placeholder="you@example.org"
+            placeholder="you@example.com"
           />
         </label>
         <label className="block text-sm font-medium text-[#123f88]">
@@ -119,11 +148,21 @@ export function AuthForm({ mode }: AuthFormProps) {
             type="password"
             autoComplete={is_register ? "new-password" : "current-password"}
             required
-            minLength={8}
+            minLength={is_register ? 12 : 8}
             className="mt-2 h-11 w-full rounded-xl border border-[#b9cdeb] bg-white px-3 text-sm outline-none transition focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20"
-            placeholder="At least 8 characters"
+            placeholder={is_register ? "12+ characters" : "Your password"}
           />
         </label>
+        {!is_register ? <div className="-mt-2 text-right"><Link href="/forgot-password" className="text-xs font-medium text-[#2563EB] hover:underline">Forgot password?</Link></div> : null}
+        {is_register ? (
+          <>
+            <p className="-mt-2 text-xs text-[#607694]">Use uppercase, lowercase, a number, and a symbol.</p>
+            <label className="block text-sm font-medium text-[#123f88]">
+              Confirm password
+              <input name="confirm_password" type="password" autoComplete="new-password" required minLength={12} className="mt-2 h-11 w-full rounded-xl border border-[#b9cdeb] bg-white px-3 text-sm outline-none transition focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20" placeholder="Re-enter your password" />
+            </label>
+          </>
+        ) : null}
 
         {error ? (
           <p className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -163,6 +202,10 @@ function read_error_message(data: ErrorPayload): string {
   if (typeof raw === "string") return raw
   if (Array.isArray(raw) && raw.length > 0) return "Please check the form fields and try again."
   return "Authentication failed."
+}
+
+function is_strong_password(password: string): boolean {
+  return password.length >= 12 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9]/.test(password)
 }
 
 function read_oauth_error(error: string | null): string | null {
