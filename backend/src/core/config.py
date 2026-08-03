@@ -169,6 +169,11 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("AUTH_SESSION_EXPIRY_SECONDS"),
         description="Lifetime, in seconds, for first-party bearer session tokens.",
     )
+    frontend_base_url: str = Field(
+        default="http://localhost:3000",
+        validation_alias=AliasChoices("FRONTEND_BASE_URL"),
+        description="Public frontend URL used in password-reset emails.",
+    )
     google_client_id: str | None = Field(
         default=None,
         validation_alias=AliasChoices("GOOGLE_CLIENT_ID"),

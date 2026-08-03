@@ -41,6 +41,8 @@ class User(Base):
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     email: Mapped[str | None] = mapped_column(Text, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    password_reset_token_hash: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)
+    password_reset_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     google_sub: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True)
     name: Mapped[str | None] = mapped_column(Text, nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)

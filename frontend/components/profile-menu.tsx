@@ -6,7 +6,9 @@ import { useState } from "react"
 /** Renders a compact initials avatar with an explicit logout menu. */
 export function ProfileMenu({ name = "Ubuntu Voice user" }: { name?: string }) {
   const [open, set_open] = useState(false)
-  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U"
+  const name_parts = name.split(/\s+/).filter(Boolean)
+  const initial_parts = name_parts.length > 1 ? [name_parts[0]!, name_parts[name_parts.length - 1]!] : name_parts
+  const initials = initial_parts.map((part) => part[0]?.toUpperCase()).join("") || "U"
 
   return (
     <div className="relative">
