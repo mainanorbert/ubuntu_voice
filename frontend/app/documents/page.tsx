@@ -8,6 +8,7 @@ import {
   Loader2,
   Plus,
   RefreshCw,
+  Trash2,
   Upload,
   X,
 } from "lucide-react"
@@ -151,9 +152,13 @@ function QueuedFileRow({
 function DocumentCard({
   doc,
   is_new,
+  deleting,
+  on_delete,
 }: {
   doc: DocumentResponse
   is_new: boolean
+  deleting: boolean
+  on_delete: (doc: DocumentResponse) => void
 }) {
   const is_embedded = doc.is_embedded
   const status = is_embedded
@@ -180,16 +185,32 @@ function DocumentCard({
           {format_short_date(doc.created_at)}
         </p>
       </div>
-      <span
-        className={cn(
-          "shrink-0 rounded-full px-3 py-1 text-sm",
-          is_embedded
-            ? "bg-[#dff5ee] text-[#00806a]"
-            : "bg-[#fdf0d9] text-[#a25800]"
-        )}
-      >
-        {status}
-      </span>
+      <div className="flex shrink-0 items-center gap-2">
+        <span
+          className={cn(
+            "rounded-full px-3 py-1 text-sm",
+            is_embedded
+              ? "bg-[#dff5ee] text-[#00806a]"
+              : "bg-[#fdf0d9] text-[#a25800]"
+          )}
+        >
+          {status}
+        </span>
+        <button
+          type="button"
+          onClick={() => on_delete(doc)}
+          disabled={deleting}
+          className="rounded-lg p-2 text-[#8aa0bd] transition-colors hover:bg-red-50 hover:text-[#dc2626] disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label={`Delete ${doc.file_name}`}
+          title="Delete document"
+        >
+          {deleting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Trash2 className="size-4" />
+          )}
+        </button>
+      </div>
     </div>
   )
 }
@@ -220,6 +241,9 @@ export default function DocumentsPage() {
   const [creating_company, set_creating_company] = useState(false)
   const [list_loading, set_list_loading] = useState(false)
   const [uploading, set_uploading] = useState(false)
+  const [deleting_document_id, set_deleting_document_id] = useState<
+    string | null
+  >(null)
   const [triggering_embed, set_triggering_embed] = useState(false)
   const [error, set_error] = useState<string | null>(null)
 
@@ -557,6 +581,43 @@ export default function DocumentsPage() {
     }
   }, [selected_company_id, load_documents])
 
+  const delete_document = useCallback(
+    async (document: DocumentResponse) => {
+      if (!selected_company_id || deleting_document_id) return
+      if (
+        !window.confirm(
+          `Delete “${document.file_name}”? This permanently removes the file and its embeddings.`
+        )
+      ) {
+        return
+      }
+
+      set_deleting_document_id(document.id)
+      set_error(null)
+      try {
+        const res = await fetch(
+          `/api/ingestion/companies/${encodeURIComponent(selected_company_id)}/documents/${encodeURIComponent(document.id)}`,
+          { method: "DELETE" }
+        )
+        if (!res.ok) {
+          const data: unknown = await res.json().catch(() => ({}))
+          set_error(format_error_payload(data))
+          return
+        }
+        set_documents((current) =>
+          current.filter((item) => item.id !== document.id)
+        )
+      } catch {
+        set_error(
+          "The document could not be deleted. Check your connection and try again."
+        )
+      } finally {
+        set_deleting_document_id(null)
+      }
+    },
+    [deleting_document_id, selected_company_id]
+  )
+
   const can_create_company =
     company_name.trim().length > 0 && company_email.trim().length > 0
   const selected_company = companies.find((c) => c.id === selected_company_id)
@@ -834,6 +895,8 @@ export default function DocumentsPage() {
                         key={doc.id}
                         doc={doc}
                         is_new={new_doc_ids.has(doc.id)}
+                        deleting={deleting_document_id === doc.id}
+                        on_delete={delete_document}
                       />
                     ))}
                   </div>
