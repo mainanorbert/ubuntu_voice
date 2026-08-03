@@ -42,7 +42,6 @@ export default function DashboardPage() {
               <h1 className="font-serif text-3xl sm:text-[29px]">Good afternoon, {name}</h1>
               <p className="mt-1 font-serif text-lg text-[#607694]">Your area status is calm. Last checked 2 minutes ago.</p>
             </div>
-            <button type="button" className="rounded-2xl bg-[#e52327] px-10 py-5 font-serif text-lg text-white shadow-sm hover:bg-[#c91c20]">Send SOS alert</button>
           </div>
 
           <section className="mt-6 grid gap-3 lg:grid-cols-3" aria-label="Safety summary">
