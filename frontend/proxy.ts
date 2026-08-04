@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 
 const AUTH_COOKIE_NAME = "ubuntu_voice_session"
 const protected_prefixes = [
-  "/chat",
   "/dashboard",
   "/documents",
   "/usage",

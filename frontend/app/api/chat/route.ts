@@ -55,7 +55,6 @@ function parse_chat_body(
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth_result = await resolve_auth_bearer_for_backend()
-  if (!auth_result.ok) return auth_result.response
 
   let raw: unknown
   try {
@@ -82,7 +81,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${auth_result.token}`,
+        ...(auth_result.ok ? { Authorization: `Bearer ${auth_result.token}` } : {}),
       },
       body: JSON.stringify({
         company_id: parsed.company_id,

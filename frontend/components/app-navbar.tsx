@@ -38,14 +38,14 @@ export function AppNavbar({ is_signed_in = false }: { is_signed_in?: boolean }) 
           <Image src="/ub_voice.png" alt="Ubuntu Voice" width={28} height={28} className="size-7 rounded-full object-cover" priority />
           <span className="hidden sm:inline">Ubuntu Voice</span>
         </Link>
-        {is_signed_in ? <nav className="hidden items-center gap-1 md:flex" aria-label="Primary navigation">
-          {links.map((link) => <Link key={link.href} href={link.href} className={`rounded-lg px-3 py-2 text-sm ${pathname === link.href ? "bg-white/15 font-medium text-white" : "text-[#dbeafe] hover:bg-white/10 hover:text-white"}`}>{link.label}</Link>)}
-        </nav> : null}
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Primary navigation">
+          {(is_signed_in ? links : []).map((link) => <Link key={link.href} href={link.href} className={`rounded-lg px-3 py-2 text-sm ${pathname === link.href ? "bg-white/15 font-medium text-white" : "text-[#dbeafe] hover:bg-white/10 hover:text-white"}`}>{link.label}</Link>)}
+        </nav>
         <div className="flex-1" />
-        <div className="hidden items-center gap-2 sm:flex"><ThemeToggle />{is_signed_in ? <ProfileMenu name={profile_name} /> : <><Link href="/login" className="rounded-full border border-[#93c5fd] px-4 py-2 text-sm text-white hover:bg-white/10">Sign in</Link><Link href="/register" className="rounded-full bg-[#2563EB] px-4 py-2 text-sm text-white hover:bg-[#60A5FA]">Register</Link></>}</div>
+        <div className="hidden items-center gap-2 sm:flex"><ThemeToggle />{is_signed_in ? <ProfileMenu name={profile_name} /> : <><Link href="/login" className="rounded-full border border-[#93c5fd] px-4 py-2 text-sm text-white hover:bg-white/10">Sign in</Link><Link href="/register" className="rounded-full bg-[#2563EB] px-4 py-2 text-sm text-white hover:bg-[#60A5FA]">Sign up</Link></>}</div>
         <button type="button" onClick={() => set_open((value) => !value)} className="cursor-pointer rounded-lg p-2 text-white md:hidden" aria-label="Toggle navigation">{open ? <X /> : <Menu />}</button>
       </div>
-      {open ? <nav className="flex flex-col gap-1 border-t border-white/20 py-3 md:hidden">{is_signed_in ? links.map((link) => <Link key={link.href} href={link.href} onClick={() => set_open(false)} className="rounded-lg px-3 py-2 text-sm text-[#dbeafe] hover:bg-white/10 hover:text-white">{link.label}</Link>) : null}<div className="flex items-center gap-3 px-3 pt-2"><ThemeToggle />{is_signed_in ? <ProfileMenu name={profile_name} /> : <Link href="/login" className="text-sm text-white">Sign in</Link>}</div></nav> : null}
+      {open ? <nav className="flex flex-col gap-1 border-t border-white/20 py-3 md:hidden">{(is_signed_in ? links : []).map((link) => <Link key={link.href} href={link.href} onClick={() => set_open(false)} className="rounded-lg px-3 py-2 text-sm text-[#dbeafe] hover:bg-white/10 hover:text-white">{link.label}</Link>)}<div className="flex items-center gap-3 px-3 pt-2"><ThemeToggle />{is_signed_in ? <ProfileMenu name={profile_name} /> : <><Link href="/login" className="text-sm text-white">Sign in</Link><Link href="/register" className="text-sm text-white">Sign up</Link></>}</div></nav> : null}
     </header>
   )
 }
