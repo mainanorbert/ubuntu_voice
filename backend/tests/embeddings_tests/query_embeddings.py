@@ -8,7 +8,6 @@ Run from the ``backend`` directory so imports resolve::
 
 Environment (typically in ``backend/.env``): ``EIVEN_SERVICE_URL`` or ``DATABASE_URL``,
 ``OPENROUTER_API_KEY``, ``OPENROUTER_BASE_URL``, embedding fields from ``Settings``,
-``CLERK_SECRET_KEY``, etc.
 """
 
 from __future__ import annotations

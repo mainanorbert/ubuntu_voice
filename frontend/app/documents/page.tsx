@@ -6,6 +6,7 @@ import {
   FileText,
   FolderOpen,
   Loader2,
+  Pencil,
   Plus,
   RefreshCw,
   Trash2,
@@ -230,6 +231,11 @@ export default function DocumentsPage() {
   const [company_phone, set_company_phone] = useState("")
   const [company_description, set_company_description] = useState("")
   const [show_create_form, set_show_create_form] = useState(false)
+  const [editing_company, set_editing_company] = useState(false)
+  const [edit_name, set_edit_name] = useState("")
+  const [edit_email, set_edit_email] = useState("")
+  const [edit_phone, set_edit_phone] = useState("")
+  const [edit_description, set_edit_description] = useState("")
 
   const [queued_files, set_queued_files] = useState<QueuedFile[]>([])
   const [pending_upload_company_id, set_pending_upload_company_id] = useState<
@@ -239,6 +245,7 @@ export default function DocumentsPage() {
 
   const [page_loading, set_page_loading] = useState(true)
   const [creating_company, set_creating_company] = useState(false)
+  const [saving_company, set_saving_company] = useState(false)
   const [list_loading, set_list_loading] = useState(false)
   const [uploading, set_uploading] = useState(false)
   const [deleting_document_id, set_deleting_document_id] = useState<
@@ -248,6 +255,7 @@ export default function DocumentsPage() {
   const [error, set_error] = useState<string | null>(null)
 
   const file_input_ref = useRef<HTMLInputElement | null>(null)
+  const selected_company = companies.find((c) => c.id === selected_company_id)
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -367,6 +375,77 @@ export default function DocumentsPage() {
     company_email,
     company_phone,
     queued_files.length,
+  ])
+
+  const start_editing_company = useCallback(() => {
+    if (!selected_company) return
+    set_edit_name(selected_company.name)
+    set_edit_email(selected_company.email)
+    set_edit_phone(selected_company.phone ?? "")
+    set_edit_description(selected_company.description ?? "")
+    set_error(null)
+    set_editing_company(true)
+  }, [selected_company])
+
+  const cancel_editing_company = useCallback(() => {
+    set_editing_company(false)
+    set_error(null)
+  }, [])
+
+  const update_company = useCallback(async () => {
+    if (!selected_company || saving_company) return
+    const name = edit_name.trim()
+    const email = edit_email.trim()
+    if (!name || !email) return
+
+    set_saving_company(true)
+    set_error(null)
+    try {
+      const res = await fetch(
+        `/api/ingestion/companies/${encodeURIComponent(selected_company.id)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            email,
+            phone: edit_phone.trim() || null,
+            description: edit_description.trim() || null,
+          }),
+        }
+      )
+      const data: unknown = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        set_error(format_error_payload(data))
+        return
+      }
+      const updated = data as Partial<CompanyResponse>
+      if (!updated.id) {
+        set_error("Unexpected response")
+        return
+      }
+      set_companies((current) =>
+        current.map((company) =>
+          company.id === updated.id
+            ? { ...company, ...(updated as CompanyResponse) }
+            : company
+        )
+      )
+      set_editing_company(false)
+    } catch {
+      set_error(
+        "The agent could not be updated. Check your connection and try again."
+      )
+    } finally {
+      set_saving_company(false)
+    }
+  }, [
+    edit_description,
+    edit_email,
+    edit_name,
+    edit_phone,
+    saving_company,
+    selected_company,
   ])
 
   // ── File queue management ──────────────────────────────────────────────────
@@ -620,7 +699,8 @@ export default function DocumentsPage() {
 
   const can_create_company =
     company_name.trim().length > 0 && company_email.trim().length > 0
-  const selected_company = companies.find((c) => c.id === selected_company_id)
+  const can_save_company =
+    edit_name.trim().length > 0 && edit_email.trim().length > 0
   const pending_document_count = documents.filter(
     (doc) => !doc.is_embedded && doc.status !== "failed"
   ).length
@@ -661,6 +741,7 @@ export default function DocumentsPage() {
                       onClick={() => {
                         set_selected_company_id(c.id)
                         set_show_create_form(false)
+                        set_editing_company(false)
                       }}
                       className={cn(
                         "group relative flex w-full items-center gap-3 rounded-2xl border px-[18px] py-4 text-left transition-colors",
@@ -673,15 +754,26 @@ export default function DocumentsPage() {
                         <span className="block truncate font-serif text-[18px] leading-tight text-[#061b3b]">
                           {c.name}
                         </span>
-                        <span className="mt-1 block truncate text-sm text-[#8aa0bd]">{c.email}</span>
+                        <span className="mt-1 block truncate text-sm text-[#8aa0bd]">
+                          {c.email}
+                        </span>
                         <span className="mt-1 block text-xs text-[#8aa0bd]">
-                          {c.id === selected_company_id ? `${documents.length} documents` : "View documents"}
+                          {c.id === selected_company_id
+                            ? `${documents.length} documents`
+                            : "View documents"}
                         </span>
                       </span>
                       {(c.phone || c.description) && (
-                        <span className="pointer-events-none absolute z-10 hidden max-w-[280px] -translate-y-1/2 rounded-lg bg-[#1E3A8A] px-3 py-2 text-xs leading-relaxed text-white shadow-lg group-hover:block group-focus-visible:block" role="tooltip">
-                          {c.phone ? <span className="block">Phone: {c.phone}</span> : null}
-                          {c.description ? <span className="block">{c.description}</span> : null}
+                        <span
+                          className="pointer-events-none absolute z-10 hidden max-w-[280px] -translate-y-1/2 rounded-lg bg-[#1E3A8A] px-3 py-2 text-xs leading-relaxed text-white shadow-lg group-hover:block group-focus-visible:block"
+                          role="tooltip"
+                        >
+                          {c.phone ? (
+                            <span className="block">Phone: {c.phone}</span>
+                          ) : null}
+                          {c.description ? (
+                            <span className="block">{c.description}</span>
+                          ) : null}
                         </span>
                       )}
                       <span
@@ -746,6 +838,148 @@ export default function DocumentsPage() {
             </aside>
 
             <div className="min-w-0 space-y-6">
+              {selected_company && (
+                <section className="rounded-2xl border border-[#dce4ef] bg-white p-6">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm text-[#64748b]">Agent profile</p>
+                      <h2 className="mt-1 font-serif text-xl text-[#1E3A8A]">
+                        {editing_company ? "Edit agent" : selected_company.name}
+                      </h2>
+                    </div>
+                    {!editing_company ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2 border-[#2563EB] text-[#2563EB] hover:bg-[#eff6ff] hover:text-[#1E3A8A]"
+                        onClick={start_editing_company}
+                      >
+                        <Pencil className="size-4" />
+                        Edit profile
+                      </Button>
+                    ) : null}
+                  </div>
+
+                  {editing_company ? (
+                    <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label
+                          htmlFor="edit-agent-name"
+                          className="text-sm font-medium text-[#1E3A8A]"
+                        >
+                          Agent name <span aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          id="edit-agent-name"
+                          value={edit_name}
+                          onChange={(event) =>
+                            set_edit_name(event.target.value)
+                          }
+                          required
+                          className="mt-1 h-10 w-full rounded-lg border border-[#b9cdeb] bg-white px-3 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#60A5FA]/40"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="edit-agent-email"
+                          className="text-sm font-medium text-[#1E3A8A]"
+                        >
+                          Contact email <span aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          id="edit-agent-email"
+                          type="email"
+                          value={edit_email}
+                          onChange={(event) =>
+                            set_edit_email(event.target.value)
+                          }
+                          required
+                          className="mt-1 h-10 w-full rounded-lg border border-[#b9cdeb] bg-white px-3 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#60A5FA]/40"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="edit-agent-phone"
+                          className="text-sm font-medium text-[#1E3A8A]"
+                        >
+                          Phone
+                        </label>
+                        <input
+                          id="edit-agent-phone"
+                          type="tel"
+                          value={edit_phone}
+                          onChange={(event) =>
+                            set_edit_phone(event.target.value)
+                          }
+                          placeholder="+254712345678"
+                          className="mt-1 h-10 w-full rounded-lg border border-[#b9cdeb] bg-white px-3 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#60A5FA]/40"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="edit-agent-description"
+                          className="text-sm font-medium text-[#1E3A8A]"
+                        >
+                          Purpose
+                        </label>
+                        <textarea
+                          id="edit-agent-description"
+                          value={edit_description}
+                          maxLength={300}
+                          rows={2}
+                          onChange={(event) =>
+                            set_edit_description(event.target.value)
+                          }
+                          className="mt-1 w-full resize-none rounded-lg border border-[#b9cdeb] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#60A5FA]/40"
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-3 sm:col-span-2">
+                        <Button
+                          type="button"
+                          className="bg-[#2563EB] text-white hover:bg-[#1E3A8A]"
+                          disabled={!can_save_company || saving_company}
+                          onClick={() => void update_company()}
+                        >
+                          {saving_company ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            "Save changes"
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={saving_company}
+                          onClick={cancel_editing_company}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-3">
+                      <div>
+                        <dt className="text-[#64748b]">Contact email</dt>
+                        <dd className="mt-1 break-words text-[#1E3A8A]">
+                          {selected_company.email}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[#64748b]">Phone</dt>
+                        <dd className="mt-1 break-words text-[#1E3A8A]">
+                          {selected_company.phone ?? "Not provided"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[#64748b]">Purpose</dt>
+                        <dd className="mt-1 break-words text-[#1E3A8A]">
+                          {selected_company.description ?? "Not provided"}
+                        </dd>
+                      </div>
+                    </dl>
+                  )}
+                </section>
+              )}
               <section className="rounded-2xl border border-[#dce4ef] bg-white p-6">
                 <div className="flex items-center justify-between gap-4">
                   <h2 className="font-serif text-xl text-[#061b3b]">

@@ -4,34 +4,31 @@ from fastapi.testclient import TestClient
 
 
 def configure_test_app(tmp_path, monkeypatch, *, user_id: str = "user_agent_edit"):
-    """Build the FastAPI app with local storage and a stubbed Clerk session."""
+    """Build the FastAPI app with local storage and a stubbed auth session."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
-    monkeypatch.setenv("CLERK_SECRET_KEY", "test-clerk-secret")
     monkeypatch.setenv("EIVEN_SERVICE_URL", f"sqlite:///{tmp_path / 'agent-edit.db'}")
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("SUPABASE_URL", "")
     monkeypatch.setenv("SUPABASE_KEY", "")
     monkeypatch.setenv("SUPABASE_SERVICE_KEY", "")
 
-    from clerk_backend_api.security.types import AuthStatus, RequestState
-    from src.core.clerk_auth import require_clerk_session
+    from src.core.auth import UserIdentity, require_auth_session
     from src.core.dependencies import clear_database_caches
     from src.main import app
 
     clear_database_caches()
 
     def install_user_override(active_user_id: str) -> None:
-        """Swap the authenticated user without calling Clerk in tests."""
+        """Swap the authenticated user without calling an external provider."""
 
-        async def stub_require_clerk_session():
-            """Return a signed-in Clerk state for the active test user."""
-            return RequestState(
-                status=AuthStatus.SIGNED_IN,
-                token="test-session",
-                payload={"sub": active_user_id, "email": f"{active_user_id}@example.org"},
+        async def stub_require_auth_session():
+            """Return the active first-party session identity without token verification."""
+            return UserIdentity(
+                user_id=active_user_id,
+                email=f"{active_user_id}@example.org",
             )
 
-        app.dependency_overrides[require_clerk_session] = stub_require_clerk_session
+        app.dependency_overrides[require_auth_session] = stub_require_auth_session
 
     install_user_override(user_id)
     return app, clear_database_caches, install_user_override

@@ -13,7 +13,6 @@ MINIMAL_PDF_BYTES = b"%PDF-1.4 test document"
 def test_document_ingestion_persists_pending_metadata(tmp_path, monkeypatch):
     """Upload creates a pending document row, stores bytes on disk, and lists them back."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
-    monkeypatch.setenv("CLERK_SECRET_KEY", "test-clerk-secret")
     db_file = tmp_path / "ingestion.db"
     upload_root = tmp_path / "uploads"
 

@@ -194,20 +194,19 @@ def test_sanitize_incident_description_removes_contact_details() -> None:
 def test_incident_statistics_endpoint_returns_only_owned_company_rows(tmp_path, monkeypatch) -> None:
     """Statistics reads are scoped to companies owned by the authenticated user."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
-    monkeypatch.setenv("CLERK_SECRET_KEY", "test-clerk-secret")
     monkeypatch.setenv("EIVEN_SERVICE_URL", f"sqlite:///{tmp_path / 'incident_stats.db'}")
 
     from src.core.dependencies import clear_database_caches, get_database_engine, get_settings
 
     clear_database_caches()
 
-    from src.core.clerk_auth import require_clerk_session
+    from src.core.auth import UserIdentity, require_auth_session
     from src.main import app
 
-    async def fake_require_clerk_session():
-        return SimpleNamespace(payload={"sub": "owner_1", "email": "owner@example.org"})
+    async def fake_require_auth_session():
+        return UserIdentity(user_id="owner_1", email="owner@example.org")
 
-    app.dependency_overrides[require_clerk_session] = fake_require_clerk_session
+    app.dependency_overrides[require_auth_session] = fake_require_auth_session
 
     try:
         settings = get_settings()

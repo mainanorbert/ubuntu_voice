@@ -20,7 +20,6 @@ PARTICIPANT_NUMBER = "whatsapp:+254711222333"
 def configure_whatsapp_test_app(tmp_path, monkeypatch, database_name: str):
     """Configure the application with an isolated WhatsApp test database."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
-    monkeypatch.setenv("CLERK_SECRET_KEY", "test-clerk-secret")
     monkeypatch.setenv("EIVEN_SERVICE_URL", f"sqlite:///{tmp_path / database_name}")
     monkeypatch.setenv("TWILIO_ACCOUNT_SID", "test-account-sid")
     monkeypatch.setenv("TWILIO_AUTH_TOKEN", "test-auth-token")

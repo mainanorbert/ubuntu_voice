@@ -117,28 +117,25 @@ def test_groundedness_debug_comparison_prints_question(capsys) -> None:
 def test_evaluation_workspace_is_owner_scoped(tmp_path, monkeypatch) -> None:
     """A signed-in owner cannot read another owner's evaluation workspace."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
-    monkeypatch.setenv("CLERK_SECRET_KEY", "test-clerk-secret")
     monkeypatch.setenv("EIVEN_SERVICE_URL", f"sqlite:///{tmp_path / 'evaluations.db'}")
     monkeypatch.setenv("UPLOAD_ROOT", str(tmp_path / "uploads"))
     monkeypatch.setenv("SUPABASE_URL", "")
     monkeypatch.setenv("SUPABASE_SERVICE_KEY", "")
 
-    from clerk_backend_api.security.types import AuthStatus, RequestState
-    from src.core.clerk_auth import require_clerk_session
+    from src.core.auth import UserIdentity, require_auth_session
     from src.core.dependencies import clear_database_caches
     from src.main import app
 
     clear_database_caches()
     active_user = {"id": "owner_a"}
 
-    async def stub_require_clerk_session():
-        return RequestState(
-            status=AuthStatus.SIGNED_IN,
-            token="test-session",
-            payload={"sub": active_user["id"], "email": f"{active_user['id']}@example.org"},
+    async def stub_require_auth_session():
+        return UserIdentity(
+            user_id=active_user["id"],
+            email=f"{active_user['id']}@example.org",
         )
 
-    app.dependency_overrides[require_clerk_session] = stub_require_clerk_session
+    app.dependency_overrides[require_auth_session] = stub_require_auth_session
     try:
         with TestClient(app) as client:
             created = client.post(
