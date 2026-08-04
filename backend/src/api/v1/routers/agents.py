@@ -18,7 +18,7 @@ from src.services.guardrails import (
 )
 from src.services.incident_statistics import classify_and_store_incident_statistics
 from src.models import Company
-from src.services.ingestion import get_owned_company, upsert_user
+from src.services.ingestion import upsert_user
 from src.services.conflict_alerts import maybe_send_conflict_alert
 from src.services.rag_agent import run_rag_agent
 
@@ -34,25 +34,25 @@ async def post_agent_chat(
     db_session: Annotated[Session, Depends(get_db_session)],
     background_tasks: BackgroundTasks,
 ) -> AgentChatResponse:
-    """Run the two-phase RAG agent pipeline for the authenticated owner's company.
+    """Run the two-phase RAG agent pipeline for a publicly selectable agent.
 
     Phase 1: A prompt prepares the latest message for retrieval using recent
     history, skipping retrieval for general conversation. Phase 2: the answer
     agent receives the current message, history, retrieval status, and any
     trusted excerpts before producing the final reply.
 
-    Returns HTTP 404 when the company_id is not found or does not belong to
-    the authenticated user.
+    Any visitor may chat with an available agent. Authentication is used only
+    for optional usage and safety-event attribution; it does not restrict the
+    agent corpus a visitor can select. Returns HTTP 404 when the agent does
+    not exist.
     """
     user = None
     if session_state is not None:
         identity = get_authenticated_user_identity(session_state)
         user, _created = upsert_user(db_session, user_id=identity.user_id, email=identity.email)
-        company = get_owned_company(db_session, company_id=body.company_id, owner_id=user.id)
-    else:
-        company = db_session.query(Company).filter(Company.id == body.company_id).one_or_none()
-        if company is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
+    company = db_session.query(Company).filter(Company.id == body.company_id).one_or_none()
+    if company is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
     db_session.commit()
 
     input_check = evaluate_input(
@@ -88,7 +88,7 @@ async def post_agent_chat(
         user_prompt=body.message,
     )
 
-    if user is not None:
+    if user is not None and company.owner_id == user.id:
         await maybe_send_conflict_alert(
             async_client=client,
             chat_model=settings.openrouter_model,
