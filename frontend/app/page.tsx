@@ -69,14 +69,14 @@ export default async function Page() {
             <span className="block bg-gradient-to-r from-[#2864e8] to-[#24479c] bg-clip-text text-transparent">communities in conflict</span>
           </h1>
           <p className="mx-auto mt-8 max-w-[640px] text-pretty text-lg leading-relaxed text-[#607694] sm:text-xl">
-            Low-bandwidth AI support grounded in trusted local knowledge.
+            Seek real-time support and get factual information to help navigate emergencies.
           </p>
           <div className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
             {!is_signed_in ? (
               <>
-              <Button size="lg" className="min-w-[260px] rounded-full bg-[#2864e8] px-9 text-lg text-white shadow-md hover:bg-[#1f56ce]" asChild>
-                <Link href="/register">
-                  Start with Ubuntu Voice
+              <Button size="lg" className="min-w-[260px] rounded-full bg-[#DC2626] px-9 text-lg text-white shadow-md hover:bg-[#B91C1C]" asChild>
+                <Link href="/chat">
+                  Report emergency
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
               </Button>

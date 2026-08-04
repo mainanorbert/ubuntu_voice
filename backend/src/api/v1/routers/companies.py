@@ -20,7 +20,7 @@ from src.api.v1.schemas.ingestion import (
 from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
 from src.core.config import Settings
 from src.core.dependencies import get_db_session, get_settings
-from src.models import Document, DocumentChunk, generate_uuid
+from src.models import Company, Document, DocumentChunk, generate_uuid
 from src.services.embedding_pipeline import run_embedding_pipeline_for_company
 from src.services.ingestion import (
     StoredDocumentFile,
@@ -87,6 +87,15 @@ async def get_companies(
     """List companies owned by the authenticated user."""
     identity = get_authenticated_user_identity(session_state)
     companies = list_companies_for_owner(db_session, owner_id=identity.user_id)
+    return [build_company_response(c) for c in companies]
+
+
+@router.get("/public", response_model=list[CompanyResponse])
+async def get_public_companies(
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> list[CompanyResponse]:
+    """List available agents for the public chat and agent directory."""
+    companies = db_session.query(Company).order_by(Company.created_at.desc()).all()
     return [build_company_response(c) for c in companies]
 
 

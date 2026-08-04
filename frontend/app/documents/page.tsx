@@ -663,7 +663,7 @@ export default function DocumentsPage() {
                         set_show_create_form(false)
                       }}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-2xl border px-[18px] py-4 text-left transition-colors",
+                        "group relative flex w-full items-center gap-3 rounded-2xl border px-[18px] py-4 text-left transition-colors",
                         c.id === selected_company_id
                           ? "border-[#d6e2f3] bg-[#edf4fd]"
                           : "border-[#dce4ef] bg-white hover:bg-[#f8fafc]"
@@ -673,12 +673,17 @@ export default function DocumentsPage() {
                         <span className="block truncate font-serif text-[18px] leading-tight text-[#061b3b]">
                           {c.name}
                         </span>
-                        <span className="mt-1 block text-sm text-[#8aa0bd]">
-                          {c.id === selected_company_id
-                            ? `${documents.length} documents`
-                            : "View documents"}
+                        <span className="mt-1 block truncate text-sm text-[#8aa0bd]">{c.email}</span>
+                        <span className="mt-1 block text-xs text-[#8aa0bd]">
+                          {c.id === selected_company_id ? `${documents.length} documents` : "View documents"}
                         </span>
                       </span>
+                      {(c.phone || c.description) && (
+                        <span className="pointer-events-none absolute z-10 hidden max-w-[280px] -translate-y-1/2 rounded-lg bg-[#1E3A8A] px-3 py-2 text-xs leading-relaxed text-white shadow-lg group-hover:block group-focus-visible:block" role="tooltip">
+                          {c.phone ? <span className="block">Phone: {c.phone}</span> : null}
+                          {c.description ? <span className="block">{c.description}</span> : null}
+                        </span>
+                      )}
                       <span
                         className="size-3 shrink-0 rounded-full bg-[#22c55e]"
                         aria-label="Agent active"

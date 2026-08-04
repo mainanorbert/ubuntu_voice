@@ -8,9 +8,7 @@ import { resolve_auth_bearer_for_backend } from "@/lib/server/resolve_auth_beare
  */
 export async function GET(): Promise<NextResponse> {
   const auth_result = await resolve_auth_bearer_for_backend()
-  if (!auth_result.ok) {
-    return auth_result.response
-  }
+  if (!auth_result.ok) return auth_result.response
 
   const url = `${get_backend_base_url()}/api/v1/companies`
   let upstream: Response

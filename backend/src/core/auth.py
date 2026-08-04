@@ -116,6 +116,18 @@ async def require_auth_session(
     return verify_session_token(settings=settings, token=token)
 
 
+async def get_optional_auth_session(
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> UserIdentity | None:
+    """Return a verified session when present, allowing public read-only flows."""
+    authorization = request.headers.get("authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        return None
+    return verify_session_token(settings=settings, token=token)
+
+
 def _sign(value: str, secret: str) -> str:
     """Sign a string with HMAC-SHA256."""
     digest = hmac.new(secret.encode("utf-8"), value.encode("utf-8"), hashlib.sha256).digest()

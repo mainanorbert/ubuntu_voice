@@ -327,6 +327,7 @@ function VoicePulsePanel({
 }
 
 export default function ChatPage() {
+  const [is_signed_in, set_is_signed_in] = useState(false)
   const [companies, set_companies] = useState<CompanyResponse[]>([])
   const [selected_company_id, set_selected_company_id] = useState<
     string | null
@@ -841,6 +842,12 @@ export default function ChatPage() {
   }, [messages, scroll_to_bottom])
 
   useEffect(() => {
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => set_is_signed_in(response.ok))
+      .catch(() => set_is_signed_in(false))
+  }, [])
+
+  useEffect(() => {
     pending_ref.current = pending
   }, [pending])
 
@@ -875,7 +882,7 @@ export default function ChatPage() {
   }, [start_listening])
 
   const load_companies = useCallback(async () => {
-    const res = await fetch("/api/ingestion/companies")
+    const res = await fetch("/api/chat/companies")
     const data: unknown = await res.json().catch(() => ({}))
     if (!res.ok) {
       set_error(format_error_payload(data))
@@ -898,12 +905,6 @@ export default function ChatPage() {
     set_page_loading(true)
     set_error(null)
     try {
-      const reg = await fetch("/api/ingestion/register", { method: "POST" })
-      const reg_data: unknown = await reg.json().catch(() => ({}))
-      if (!reg.ok) {
-        set_error(format_error_payload(reg_data))
-        return
-      }
       await load_companies()
     } finally {
       set_page_loading(false)
@@ -1022,7 +1023,7 @@ export default function ChatPage() {
         aria-hidden
       />
 
-      <AppNavbar is_signed_in />
+      <AppNavbar is_signed_in={is_signed_in} />
       <header className="sticky top-0 z-20 hidden border-b border-[#dce4ef] bg-white px-4 shadow-sm">
         <div className="mx-auto flex h-[66px] max-w-[1840px] items-center gap-3">
           <Link
