@@ -78,47 +78,6 @@ Ensure that:
 - Invalid submissions never reach the backend unnecessarily.
 - Data integrity is maintained.
 
----
-
-## Buttons, Links, and Navigation
-
-Verify that:
-
-- Every button performs its intended action.
-- Internal navigation routes correctly.
-- External links open the correct destinations.
-- Disabled buttons remain inaccessible until requirements are met.
-- Loading states prevent duplicate submissions.
-
----
-
-# User Interface and Compatibility
-
-## Responsive Testing
-
-Test the application across multiple screen sizes to ensure:
-
-- No text clipping or overflow
-- Proper image scaling
-- Functional navigation menus
-- Consistent spacing and alignment
-- Readable typography
-- Accessible touch targets on mobile devices
-
----
-
-## Cross-Browser Compatibility
-
-Perform validation on major browsers, including:
-
-- Google Chrome
-- Mozilla Firefox
-- Safari
-- Microsoft Edge
-
-Ensure consistent appearance and functionality without layout inconsistencies or browser-specific issues.
-
----
 
 # Performance and Reliability
 
@@ -132,18 +91,7 @@ Verify that:
 - Loading indicators appear while data is being fetched.
 - Lazy loading or pagination is implemented where appropriate.
 
----
 
-## Network Failure Handling
-
-Simulate slow or unavailable network conditions and confirm that:
-
-- The application remains responsive.
-- Appropriate loading indicators are displayed.
-- Friendly retry messages are shown when requests fail.
-- Users can recover without refreshing the application.
-
----
 
 ## Error State Validation
 
@@ -162,6 +110,7 @@ Ensure every error state:
 - Displays a meaningful message.
 - Provides recovery options where applicable.
 - Does not leave the application in a broken or unusable state.
+- If you find developer like errors like 'Could not reach the API server. Is the backend running?' change them
 
 ---
 

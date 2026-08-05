@@ -92,7 +92,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     })
   } catch {
     return NextResponse.json(
-      { error: "Could not reach the API server. Is the backend running?" },
+      { error: "We’re having trouble connecting right now. Please try again in a moment." },
       { status: 502 },
     )
   }
