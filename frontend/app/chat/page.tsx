@@ -353,6 +353,7 @@ export default function ChatPage() {
 
   const chat_scroll_ref = useRef<HTMLDivElement | null>(null)
   const list_end_ref = useRef<HTMLDivElement | null>(null)
+  const chat_input_ref = useRef<HTMLTextAreaElement | null>(null)
   const recognition_ref = useRef<BrowserSpeechRecognition | null>(null)
   const listen_retry_timeout_ref = useRef<number | null>(null)
   const final_transcript_ref = useRef("")
@@ -366,6 +367,18 @@ export default function ChatPage() {
   const manual_stop_ref = useRef(false)
   const handle_voice_transcript_ref = useRef<(text: string) => void>(() => {})
   const start_listening_ref = useRef<() => void>(() => {})
+
+  const resize_chat_input = useCallback(() => {
+    const input = chat_input_ref.current
+    if (!input) return
+
+    input.style.height = "auto"
+    input.style.height = `${input.scrollHeight}px`
+  }, [])
+
+  useEffect(() => {
+    resize_chat_input()
+  }, [draft, resize_chat_input])
 
   const selected_company = companies.find((c) => c.id === selected_company_id)
 
@@ -1215,7 +1228,7 @@ export default function ChatPage() {
                 >
                   <div
                     className={cn(
-                      "flex max-w-[88%] items-start gap-2",
+                      "flex min-w-0 max-w-[88%] items-start gap-2",
                       m.role === "user" && "flex-row-reverse"
                     )}
                   >
@@ -1235,7 +1248,7 @@ export default function ChatPage() {
                     </div>
                     <div
                       className={cn(
-                        "rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap shadow-sm",
+                        "min-w-0 max-w-full rounded-2xl px-2 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] shadow-sm sm:px-3.5",
                         m.role === "user"
                           ? "rounded-tr-md bg-primary text-primary-foreground"
                           : "rounded-tl-md border border-border/80 bg-background text-foreground"
@@ -1298,10 +1311,14 @@ export default function ChatPage() {
             <div className="relative">
               <textarea
                 id="chat-input"
+                ref={chat_input_ref}
                 rows={2}
                 value={draft}
                 disabled={pending || !selected_company_id}
-                onChange={(e) => set_draft(e.target.value)}
+                onChange={(e) => {
+                  set_draft(e.target.value)
+                  resize_chat_input()
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault()
@@ -1312,10 +1329,10 @@ export default function ChatPage() {
                   selected_company_id
                     ? voice_mode_enabled
                       ? "Voice mode is active. Type here anytime."
-                      : "Ask Ubuntu Voice..."
+                      : "Report or Ask Ubuntu Voice..."
                     : "Select a knowledge base first..."
                 }
-                className="ubuntu-chat-input h-14 w-full resize-none overflow-y-auto rounded-2xl border border-[#dce4ef] bg-white px-3 py-2 pr-14 pb-8 pl-11 text-base shadow-sm transition-[border-color,box-shadow] outline-none placeholder:text-[#8aa0bd] focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20 sm:h-16 sm:px-4 sm:py-2 sm:pb-9 sm:pl-12 sm:text-lg disabled:opacity-50"
+                className="ubuntu-chat-input min-h-14 w-full resize-none overflow-hidden rounded-2xl border border-[#dce4ef] bg-white px-3 py-2 pr-12 pb-8 pl-12 text-base shadow-sm transition-[border-color,box-shadow] outline-none placeholder:text-[#8aa0bd] focus:border-[#2864e8] focus:ring-2 focus:ring-[#2864e8]/20 sm:min-h-16 sm:px-4 sm:py-2 sm:pb-9 sm:pl-20 sm:pr-14 sm:text-lg disabled:opacity-50"
               />
               <Button
                 type="button"
