@@ -2,16 +2,71 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from src.api.v1.schemas.monitoring import GuardrailEventResponse, IncidentStatisticResponse
+from src.api.v1.schemas.monitoring import GuardrailEventResponse, IncidentStatisticResponse, KnownPlaceInput, KnownPlaceResponse
 from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
 from src.core.dependencies import get_db_session
-from src.models import Company, GuardrailEvent, IncidentStatistic
+from src.models import Company, GuardrailEvent, IncidentStatistic, KnownPlace
 from src.services.ingestion import upsert_user
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
+
+
+def place_response(place: KnownPlace) -> KnownPlaceResponse:
+    return KnownPlaceResponse.model_validate(place, from_attributes=True)
+
+
+@router.get("/known-places", response_model=list[KnownPlaceResponse])
+async def list_known_places(
+    _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+    include_inactive: bool = False,
+) -> list[KnownPlaceResponse]:
+    query = db_session.query(KnownPlace)
+    if not include_inactive:
+        query = query.filter(KnownPlace.is_active.is_(True))
+    return [place_response(place) for place in query.order_by(KnownPlace.name).all()]
+
+
+@router.post("/known-places", response_model=KnownPlaceResponse, status_code=201)
+async def create_known_place(payload: KnownPlaceInput, _session_state: Annotated[UserIdentity, Depends(require_auth_session)], db_session: Annotated[Session, Depends(get_db_session)]) -> KnownPlaceResponse:
+    place = KnownPlace(name=payload.name.strip(), latitude=payload.latitude, longitude=payload.longitude)
+    if not place.name:
+        raise HTTPException(status_code=422, detail="Place name is required.")
+    if db_session.query(KnownPlace).filter(KnownPlace.name == place.name).first():
+        raise HTTPException(status_code=409, detail="A place with this name already exists.")
+    db_session.add(place)
+    db_session.commit()
+    db_session.refresh(place)
+    return place_response(place)
+
+
+@router.put("/known-places/{place_id}", response_model=KnownPlaceResponse)
+async def update_known_place(place_id: int, payload: KnownPlaceInput, _session_state: Annotated[UserIdentity, Depends(require_auth_session)], db_session: Annotated[Session, Depends(get_db_session)]) -> KnownPlaceResponse:
+    place = db_session.get(KnownPlace, place_id)
+    if place is None:
+        raise HTTPException(status_code=404, detail="Place not found.")
+    name = payload.name.strip()
+    duplicate = db_session.query(KnownPlace).filter(KnownPlace.name == name, KnownPlace.id != place_id).first()
+    if not name:
+        raise HTTPException(status_code=422, detail="Place name is required.")
+    if duplicate:
+        raise HTTPException(status_code=409, detail="A place with this name already exists.")
+    place.name, place.latitude, place.longitude = name, payload.latitude, payload.longitude
+    db_session.commit()
+    db_session.refresh(place)
+    return place_response(place)
+
+
+@router.delete("/known-places/{place_id}", status_code=204)
+async def delete_known_place(place_id: int, _session_state: Annotated[UserIdentity, Depends(require_auth_session)], db_session: Annotated[Session, Depends(get_db_session)]) -> None:
+    place = db_session.get(KnownPlace, place_id)
+    if place is None:
+        raise HTTPException(status_code=404, detail="Place not found.")
+    place.is_active = False
+    db_session.commit()
 
 
 def build_guardrail_event_response(event: GuardrailEvent) -> GuardrailEventResponse:
