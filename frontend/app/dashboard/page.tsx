@@ -3,20 +3,51 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
-import { BarChart3, Gauge, Home, ShieldAlert } from "lucide-react"
+import { BarChart3, Gauge, Home, Loader2, Map, ShieldAlert } from "lucide-react"
 import { AppNavbar } from "@/components/app-navbar"
+import { IncidentHotspotMap } from "@/components/incident-hotspot-map"
+import type { IncidentStatistic, KnownPlace } from "@/components/incident-hotspot-map"
 
 type CurrentUser = { name: string | null }
 
 /** Renders the calm, low-bandwidth community safety dashboard overview. */
 export default function DashboardPage() {
   const [user, set_user] = useState<CurrentUser | null>(null)
+  const [statistics, set_statistics] = useState<IncidentStatistic[]>([])
+  const [known_places, set_known_places] = useState<KnownPlace[]>([])
+  const [map_loading, set_map_loading] = useState(true)
+  const [map_error, set_map_error] = useState<string | null>(null)
 
   useEffect(() => {
     fetch("/api/auth/me", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((profile: CurrentUser | null) => set_user(profile))
       .catch(() => set_user(null))
+
+    async function load_hotspot_data() {
+      try {
+        const [statistics_response, places_response] = await Promise.all([
+          fetch("/api/monitoring/incident-statistics?limit=500", { cache: "no-store" }),
+          fetch("/api/monitoring/known-places", { cache: "no-store" }),
+        ])
+        if (!statistics_response.ok || !places_response.ok) {
+          set_map_error("Incident locations are temporarily unavailable. Please try again later.")
+          return
+        }
+        const [statistics_data, places_data] = await Promise.all([statistics_response.json(), places_response.json()])
+        if (!Array.isArray(statistics_data) || !Array.isArray(places_data)) {
+          set_map_error("Incident locations could not be loaded right now.")
+          return
+        }
+        set_statistics(statistics_data)
+        set_known_places(places_data)
+      } catch {
+        set_map_error("Incident locations are temporarily unavailable. Please try again later.")
+      } finally {
+        set_map_loading(false)
+      }
+    }
+    void load_hotspot_data()
   }, [])
 
   const name = user?.name || "Ubuntu Voice user"
@@ -48,6 +79,35 @@ export default function DashboardPage() {
             <SummaryCard label="Active responders nearby" value="3" />
             <SummaryCard label="Your open reports" value="1" />
             <SummaryCard label="Connection" value="Stable" value_class="text-[#008575]" />
+          </section>
+
+          <section className="mt-6 overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm" aria-labelledby="hotspot-map-title">
+            <div className="flex flex-col gap-3 border-b border-[#dce4ef] px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Map className="size-5 text-[#2563EB]" aria-hidden="true" />
+                  <h2 id="hotspot-map-title" className="font-serif text-lg">Incident hotspots</h2>
+                </div>
+                <p className="mt-1 max-w-2xl text-sm text-[#607694]">Each reported incident category appears as its own colored dot. Dots for the same place are linked, and dot size shows that category’s report count.</p>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[#607694]" aria-label="Map legend">
+                <span><i className="mr-1 inline-block size-2.5 rounded-full bg-[#DC2626]" />Rights Violations</span>
+                <span><i className="mr-1 inline-block size-2.5 rounded-full bg-[#F97316]" />Casualties</span>
+                <span><i className="mr-1 inline-block size-2.5 rounded-full bg-[#2563EB]" />Displacements</span>
+                <span><i className="mr-1 inline-block size-2.5 rounded-full bg-[#EAB308]" />Severe Hunger</span>
+              </div>
+            </div>
+            {map_loading ? (
+              <div className="flex h-[360px] items-center justify-center gap-2 text-sm text-[#607694] sm:h-[460px]" role="status">
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Loading incident hotspots...
+              </div>
+            ) : map_error ? (
+              <div className="flex h-[360px] items-center justify-center px-5 text-center text-sm text-[#DC2626] sm:h-[460px]" role="alert">{map_error}</div>
+            ) : statistics.length === 0 ? (
+              <div className="flex h-[360px] items-center justify-center px-5 text-center text-sm text-[#607694] sm:h-[460px]">No incident statistics have been recorded yet.</div>
+            ) : (
+              <IncidentHotspotMap statistics={statistics} known_places={known_places} />
+            )}
           </section>
 
           <section className="mt-6 grid gap-4 xl:grid-cols-[1.35fr_1fr]">

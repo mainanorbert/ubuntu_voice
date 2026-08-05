@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Loader2, MapPin, RefreshCw, ShieldAlert, Table2 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
@@ -130,6 +131,7 @@ export default function StatisticsPage() {
       description="Monitor reported incidents by agent, location, and category."
     >
       <div className="flex flex-col gap-6">
+        <div><Link href="/places" className="inline-flex items-center gap-2 rounded-lg bg-[#2563EB] px-3 py-2 text-sm font-medium text-white hover:bg-[#1E3A8A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA]"> <MapPin className="size-4" /> Manage known places</Link></div>
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-medium text-[#607694]">
