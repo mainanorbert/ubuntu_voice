@@ -110,6 +110,7 @@ Ensure every error state:
 - Displays a meaningful message.
 - Provides recovery options where applicable.
 - Does not leave the application in a broken or unusable state.
+- If you find developer like errors like 'Could not reach the API server. Is the backend running?' change them
 
 ---
 

@@ -88,24 +88,26 @@ async def post_agent_chat(
         user_prompt=body.message,
     )
 
-    if user is not None and company.owner_id == user.id:
-        await maybe_send_conflict_alert(
-            async_client=client,
-            chat_model=settings.openrouter_model,
-            sendgrid_api_key=settings.sendgrid_api_key,
-            sendgrid_from_email=settings.sendgrid_from_email,
-            twilio_account_sid=settings.twilio_account_sid,
-            twilio_auth_token=settings.twilio_auth_token,
-            twilio_sms_from_number=settings.twilio_sms_from_number,
-            twilio_sms_to_number=settings.twilio_sms_to_number,
-            pushover_user=settings.pushover_user,
-            pushover_token=settings.pushover_token,
-            company_id=company.id,
-            company_name=company.name,
-            recipient_email=company.email,
-            user_message=body.message,
-            language=body.language,
-        )
+    # Alerts belong to the selected agent, not to the identity of the person
+    # reporting the emergency. Public chat may be used by anonymous visitors
+    # and by users who do not own the selected agent.
+    await maybe_send_conflict_alert(
+        async_client=client,
+        chat_model=settings.openrouter_model,
+        sendgrid_api_key=settings.sendgrid_api_key,
+        sendgrid_from_email=settings.sendgrid_from_email,
+        twilio_account_sid=settings.twilio_account_sid,
+        twilio_auth_token=settings.twilio_auth_token,
+        twilio_sms_from_number=settings.twilio_sms_from_number,
+        twilio_sms_to_number=settings.twilio_sms_to_number,
+        pushover_user=settings.pushover_user,
+        pushover_token=settings.pushover_token,
+        company_id=company.id,
+        company_name=company.name,
+        recipient_email=company.email,
+        user_message=body.message,
+        language=body.language,
+    )
 
     reply, grounded, usage_charges = await run_rag_agent(
         async_client=client,
