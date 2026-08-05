@@ -1017,7 +1017,7 @@ export default function ChatPage() {
     !pending && Boolean(draft.trim()) && Boolean(selected_company_id)
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-[#f7f9fc] text-[#061b3b]">
+    <div className="relative flex min-h-svh flex-col overflow-x-hidden bg-[#f7f9fc] text-[#061b3b]">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[linear-gradient(180deg,rgba(35,106,85,0.14),rgba(213,150,52,0.08),transparent)] dark:bg-[linear-gradient(180deg,rgba(74,157,177,0.14),rgba(35,106,85,0.10),transparent)]"
         aria-hidden
@@ -1078,7 +1078,7 @@ export default function ChatPage() {
       </header>
 
       <main className="relative z-10 flex min-h-0 w-full flex-1 px-4 py-2 sm:px-6 sm:py-4 lg:px-10 lg:py-6">
-        <section className="mx-auto flex min-h-0 w-full max-w-[1120px] min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#dce4ef] bg-[#f7f9fc] shadow-sm lg:h-[calc(100svh-116px)] lg:flex-none">
+        <section className="mx-auto flex w-full max-w-[1120px] min-w-0 flex-1 flex-col overflow-visible rounded-2xl border border-[#dce4ef] bg-[#f7f9fc] shadow-sm">
           <div className="flex flex-col gap-3 border-b border-[#dce4ef] bg-white px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6 lg:px-8">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -1175,16 +1175,13 @@ export default function ChatPage() {
 
           <div
             ref={chat_scroll_ref}
-            className={cn(
-              "min-h-0 flex-1 space-y-4 bg-[#f7f9fc] px-2 py-2 sm:px-8 sm:py-7 lg:px-12",
-              messages.length === 0 ? "overflow-hidden" : "overflow-y-auto"
-            )}
+            className="space-y-4 bg-[#f7f9fc] px-2 py-2 sm:px-8 sm:py-7 lg:px-12"
           >
             {messages.length === 0 ? (
               <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-4 py-4 text-center sm:min-h-[22rem] sm:px-12 sm:pt-20 sm:pb-10 lg:min-h-0 lg:px-12 lg:py-6">
                 <EmergencyBackground />
                 <div className="relative z-10 flex flex-col items-center">
-                  <div className="mb-4 flex size-15 items-center justify-center rounded-full bg-[#dbeafe] shadow-sm ring-2 ring-[#eff6ff] sm:mb-8 sm:size-28 sm:ring-8 lg:mb-1 lg:size-20">
+                  <div className="mb-4 flex size-15 items-center justify-center sm:mb-8 sm:size-28 lg:mb-1 lg:size-20">
                     <div className="ubuntu-chat-float flex size-16 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-md sm:size-24 lg:size-20">
                       <Megaphone
                         className="size-8 sm:size-12 lg:size-10"
@@ -1292,7 +1289,7 @@ export default function ChatPage() {
           ) : null}
 
           <form
-            className="border-t border-[#dce4ef] bg-white px-3 py-2 sm:px-8 sm:py-4 lg:px-12"
+            className="border-t border-[#dce4ef] bg-[#f7f9fc] px-3 py-2 sm:px-8 sm:py-4 lg:px-12"
             onSubmit={handle_text_submit}
           >
             <label htmlFor="chat-input" className="sr-only">
