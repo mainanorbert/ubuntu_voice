@@ -1,6 +1,7 @@
 """Response models for the monitoring dashboard endpoints."""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -34,6 +35,15 @@ class IncidentStatisticResponse(BaseModel):
     type: str
     total_count: int
     updated_at: datetime
+
+
+class IncidentStatisticUpdate(BaseModel):
+    """Validated corrections to one aggregated incident-statistics row."""
+
+    place: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(..., min_length=1, max_length=500)
+    type: Literal["Rights Violations", "Displacements", "Casualties", "Severe Hunger"]
+    total_count: int = Field(..., ge=1, le=1_000_000_000)
 
 
 class IncidentStatisticsSummary(BaseModel):

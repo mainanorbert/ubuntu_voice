@@ -6,10 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from src.api.v1.schemas.monitoring import GuardrailEventResponse, IncidentStatisticResponse, IncidentStatisticsAgent, IncidentStatisticsPageResponse, IncidentStatisticsSummary, KnownPlaceInput, KnownPlaceResponse
+from src.api.v1.schemas.monitoring import GuardrailEventResponse, IncidentStatisticResponse, IncidentStatisticUpdate, IncidentStatisticsAgent, IncidentStatisticsPageResponse, IncidentStatisticsSummary, KnownPlaceInput, KnownPlaceResponse
 from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
 from src.core.dependencies import get_db_session
 from src.models import Company, GuardrailEvent, IncidentStatistic, KnownPlace
+from src.services.incident_statistics import normalize_incident_place, sanitize_incident_description
 from src.services.ingestion import upsert_user
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
@@ -103,6 +104,67 @@ def build_incident_statistic_response(row: IncidentStatistic, company_name: str)
         total_count=row.total_count,
         updated_at=row.updated_at,
     )
+
+
+@router.put("/incident-statistics/{statistic_id}", response_model=IncidentStatisticResponse)
+async def update_incident_statistic(
+    statistic_id: str,
+    payload: IncidentStatisticUpdate,
+    _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> IncidentStatisticResponse:
+    """Allow any signed-in user to correct an aggregated incident row."""
+    row = db_session.get(IncidentStatistic, statistic_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Statistic not found.")
+
+    place = payload.place.strip()
+    description = sanitize_incident_description(payload.description)
+    normalized_place = normalize_incident_place(place)
+    if not normalized_place:
+        raise HTTPException(status_code=422, detail="Place is required.")
+    if not description:
+        raise HTTPException(status_code=422, detail="Description is required.")
+
+    duplicate = (
+        db_session.query(IncidentStatistic)
+        .filter(
+            IncidentStatistic.company_id == row.company_id,
+            IncidentStatistic.normalized_place == normalized_place,
+            IncidentStatistic.type == payload.type,
+            IncidentStatistic.id != row.id,
+        )
+        .first()
+    )
+    if duplicate is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="A statistic for this agent, place, and category already exists. Edit that row instead.",
+        )
+
+    row.place = place
+    row.normalized_place = normalized_place
+    row.description = description
+    row.type = payload.type
+    row.total_count = payload.total_count
+    db_session.commit()
+    db_session.refresh(row)
+    company_name = db_session.query(Company.name).filter(Company.id == row.company_id).scalar()
+    return build_incident_statistic_response(row, company_name)
+
+
+@router.delete("/incident-statistics/{statistic_id}", status_code=204)
+async def delete_incident_statistic(
+    statistic_id: str,
+    _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> None:
+    """Allow any signed-in user to remove an incorrect incident statistic."""
+    row = db_session.get(IncidentStatistic, statistic_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Statistic not found.")
+    db_session.delete(row)
+    db_session.commit()
 
 
 @router.get("/guardrail-events", response_model=list[GuardrailEventResponse])
