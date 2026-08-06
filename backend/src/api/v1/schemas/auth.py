@@ -32,6 +32,18 @@ class AuthResponse(BaseModel):
     user: AuthUserResponse
 
 
+class RegistrationPendingResponse(BaseModel):
+    """Confirmation shown after a manual registration email is sent."""
+
+    message: str
+
+
+class EmailVerificationConfirmRequest(BaseModel):
+    """One-time token from a manual-registration confirmation email."""
+
+    token: str = Field(..., min_length=32, max_length=512)
+
+
 class ManualAuthRequest(BaseModel):
     """Email and password payload for manual sign-in."""
 

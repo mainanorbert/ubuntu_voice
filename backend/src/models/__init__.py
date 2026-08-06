@@ -53,6 +53,25 @@ class User(Base):
     )
 
 
+class PendingEmailVerification(Base):
+    """A manual registration awaiting ownership confirmation of its email address."""
+
+    __tablename__ = "pending_email_verifications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    email: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    token_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class Company(Base):
     """Tenant boundary identified by a globally unique name and contact details."""
 
