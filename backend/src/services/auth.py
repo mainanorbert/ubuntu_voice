@@ -24,7 +24,7 @@ from src.core.auth import (
     verify_password,
 )
 from src.core.config import Settings
-from src.models import User
+from src.models import PendingEmailVerification, User
 
 
 @dataclass(frozen=True)
@@ -67,21 +67,68 @@ def find_user_by_email(session: Session, email: str) -> User | None:
     )
 
 
-def register_manual_user(session: Session, *, email: str, password: str, name: str | None) -> User:
-    """Create a password user, or add a password to an existing Google/email-matched user."""
+def start_manual_registration(
+    session: Session, *, email: str, password: str, name: str | None
+) -> tuple[PendingEmailVerification, str]:
+    """Store a pending password registration and return its one-time email token."""
     normalized = normalize_email(email)
     user = find_user_by_email(session, normalized)
-    if user is not None:
-        if user.password_hash:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered.")
-        user.password_hash = hash_password(password)
-        if name and not user.name:
-            user.name = name
-        session.flush()
-        return user
+    if user is not None and user.password_hash:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered.")
 
-    user = User(id=generate_user_id(), email=normalized, password_hash=hash_password(password), name=name)
-    session.add(user)
+    token = secrets.token_urlsafe(32)
+    pending = session.query(PendingEmailVerification).filter(PendingEmailVerification.email == normalized).one_or_none()
+    if pending is None:
+        pending = PendingEmailVerification(
+            email=normalized,
+            password_hash=hash_password(password),
+            name=name,
+            token_hash=_hash_email_verification_token(token),
+            expires_at=datetime.now(UTC) + timedelta(minutes=30),
+        )
+        session.add(pending)
+    else:
+        pending.password_hash = hash_password(password)
+        pending.name = name
+        pending.token_hash = _hash_email_verification_token(token)
+        pending.expires_at = datetime.now(UTC) + timedelta(minutes=30)
+    session.flush()
+    return pending, token
+
+
+def confirm_email_verification(session: Session, *, token: str) -> User:
+    """Create or complete a local account from a valid, single-use email link."""
+    token_hash = _hash_email_verification_token(token)
+    pending = (
+        session.query(PendingEmailVerification)
+        .filter(PendingEmailVerification.token_hash == token_hash)
+        .with_for_update()
+        .one_or_none()
+    )
+    now = datetime.now(UTC)
+    if pending is None or pending.expires_at <= now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This email confirmation link is invalid or has expired.",
+        )
+
+    user = find_user_by_email(session, pending.email)
+    if user is None:
+        user = User(
+            id=generate_user_id(),
+            email=pending.email,
+            password_hash=pending.password_hash,
+            name=pending.name,
+        )
+        session.add(user)
+    elif user.password_hash:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered.")
+    else:
+        user.password_hash = pending.password_hash
+        if pending.name and not user.name:
+            user.name = pending.name
+
+    session.delete(pending)
     session.flush()
     return user
 
@@ -89,8 +136,13 @@ def register_manual_user(session: Session, *, email: str, password: str, name: s
 def authenticate_manual_user(session: Session, *, email: str, password: str) -> User:
     """Validate manual credentials and return the matching user."""
     user = find_user_by_email(session, email)
-    if user is None or not verify_password(password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="We couldn't find an account with that email address.",
+        )
+    if not verify_password(password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password. Please try again.")
     return user
 
 
@@ -129,6 +181,33 @@ async def send_password_reset_email(
         raise RuntimeError(f"SendGrid email delivery failed with status {response.status_code}.")
 
 
+async def send_email_verification_email(
+    *,
+    sendgrid_api_key: str,
+    sender_email: str,
+    recipient_email: str,
+    verification_url: str,
+) -> None:
+    """Deliver the one-time link that activates a manual registration."""
+    message = Mail(
+        from_email=sender_email,
+        to_emails=recipient_email,
+        subject="Confirm your Ubuntu Voice email",
+        html_content=(
+            "<p>Thanks for creating an Ubuntu Voice account.</p>"
+            f'<p><a href="{escape(verification_url, quote=True)}">Confirm your email</a></p>'
+            "<p>This link expires in 30 minutes. If you did not create this account, you can ignore this email.</p>"
+        ),
+    )
+
+    def send_message():
+        return SendGridAPIClient(sendgrid_api_key).send(message)
+
+    response = await asyncio.to_thread(send_message)
+    if response.status_code >= 400:
+        raise RuntimeError(f"SendGrid email delivery failed with status {response.status_code}.")
+
+
 def reset_password(session: Session, *, token: str, password: str) -> None:
     """Replace a password when presented with a valid, unexpired reset token."""
     token_hash = _hash_password_reset_token(token)
@@ -144,6 +223,11 @@ def reset_password(session: Session, *, token: str, password: str) -> None:
 
 def _hash_password_reset_token(token: str) -> str:
     """Create a non-reversible database value for a reset token."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _hash_email_verification_token(token: str) -> str:
+    """Create a non-reversible database value for an email-verification token."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 

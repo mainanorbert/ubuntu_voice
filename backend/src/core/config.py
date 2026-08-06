@@ -90,12 +90,12 @@ class Settings(BaseSettings):
     sendgrid_api_key: str | None = Field(
         default=None,
         validation_alias=AliasChoices("SENDGRID_API_KEY"),
-        description="Optional SendGrid API key used for emerging-conflict alert emails.",
+        description="Optional SendGrid API key used for account and alert emails.",
     )
     sendgrid_from_email: str | None = Field(
         default=None,
         validation_alias=AliasChoices("SENDGRID_FROM_EMAIL"),
-        description="Verified SendGrid sender address used for emerging-conflict alert emails.",
+        description="Verified SendGrid sender address used for account and alert emails.",
     )
     twilio_account_sid: str | None = Field(
         default=None,

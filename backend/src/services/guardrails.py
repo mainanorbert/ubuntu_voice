@@ -115,11 +115,7 @@ def evaluate_input(
     """
     token_count = count_input_tokens(message, encoding_name=encoding_name)
     if token_count > max_tokens:
-        reason = (
-            f"Your message is too long ({token_count} tokens). "
-            f"Please keep requests under {max_tokens} tokens and ask one "
-            "focused question at a time."
-        )
+        reason = "Your message is too long. Please shorten it and try again."
         return InputCheckResult(
             allowed=False,
             token_count=token_count,

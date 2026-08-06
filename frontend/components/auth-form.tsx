@@ -14,6 +14,7 @@ type AuthFormProps = {
 type ErrorPayload = {
   detail?: unknown
   error?: unknown
+  message?: unknown
 }
 
 /**
@@ -23,12 +24,14 @@ export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter()
   const search_params = useSearchParams()
   const [error, set_error] = useState<string | null>(read_oauth_error(search_params.get("error")))
+  const [message, set_message] = useState<string | null>(null)
   const [loading, set_loading] = useState(false)
   const is_register = mode === "register"
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     set_error(null)
+    set_message(null)
     set_loading(true)
 
     const form = new FormData(event.currentTarget)
@@ -75,6 +78,14 @@ export function AuthForm({ mode }: AuthFormProps) {
       const data = (await response.json().catch(() => ({}))) as ErrorPayload
       if (!response.ok) {
         set_error(read_error_message(data))
+        return
+      }
+      if (is_register) {
+        set_message(
+          typeof data.message === "string"
+            ? data.message
+            : "Check your inbox to confirm your email and finish creating your account.",
+        )
         return
       }
       router.replace("/")
@@ -167,6 +178,11 @@ export function AuthForm({ mode }: AuthFormProps) {
         {error ? (
           <p className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
+          </p>
+        ) : null}
+        {message ? (
+          <p className="rounded-xl border border-[#60A5FA] bg-[#eff6ff] px-3 py-2 text-sm text-[#1E3A8A]">
+            {message}
           </p>
         ) : null}
 
