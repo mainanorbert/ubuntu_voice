@@ -34,7 +34,12 @@ async def list_known_places(
 
 @router.post("/known-places", response_model=KnownPlaceResponse, status_code=201)
 async def create_known_place(payload: KnownPlaceInput, _session_state: Annotated[UserIdentity, Depends(require_auth_session)], db_session: Annotated[Session, Depends(get_db_session)]) -> KnownPlaceResponse:
-    place = KnownPlace(name=payload.name.strip(), latitude=payload.latitude, longitude=payload.longitude)
+    place = KnownPlace(
+        name=payload.name.strip(),
+        country=payload.country.strip() if payload.country and payload.country.strip() else None,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+    )
     if not place.name:
         raise HTTPException(status_code=422, detail="Place name is required.")
     if db_session.query(KnownPlace).filter(KnownPlace.name == place.name).first():
@@ -56,7 +61,9 @@ async def update_known_place(place_id: int, payload: KnownPlaceInput, _session_s
         raise HTTPException(status_code=422, detail="Place name is required.")
     if duplicate:
         raise HTTPException(status_code=409, detail="A place with this name already exists.")
-    place.name, place.latitude, place.longitude = name, payload.latitude, payload.longitude
+    place.name = name
+    place.country = payload.country.strip() if payload.country and payload.country.strip() else None
+    place.latitude, place.longitude = payload.latitude, payload.longitude
     db_session.commit()
     db_session.refresh(place)
     return place_response(place)

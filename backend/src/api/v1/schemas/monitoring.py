@@ -75,6 +75,7 @@ class IncidentStatisticsPageResponse(BaseModel):
 class KnownPlaceResponse(BaseModel):
     id: int
     name: str
+    country: str | None
     latitude: float
     longitude: float
     is_active: bool
@@ -84,5 +85,6 @@ class KnownPlaceResponse(BaseModel):
 
 class KnownPlaceInput(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
+    country: str | None = Field(default=None, max_length=100)
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
