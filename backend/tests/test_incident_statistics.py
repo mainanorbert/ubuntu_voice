@@ -191,8 +191,8 @@ def test_sanitize_incident_description_removes_contact_details() -> None:
     assert "Goma" in summary
 
 
-def test_incident_statistics_endpoint_returns_only_owned_company_rows(tmp_path, monkeypatch) -> None:
-    """Statistics reads are scoped to companies owned by the authenticated user."""
+def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agent(tmp_path, monkeypatch) -> None:
+    """Signed-in users can view all statistics or select one reporting agent."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
     monkeypatch.setenv("EIVEN_SERVICE_URL", f"sqlite:///{tmp_path / 'incident_stats.db'}")
 
@@ -260,10 +260,23 @@ def test_incident_statistics_endpoint_returns_only_owned_company_rows(tmp_path, 
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["company_id"] == "company_1"
-        assert data[0]["company_name"] == "DRC Women Peacebuilders"
-        assert data[0]["place"] == "Goma"
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+        assert {row["company_id"] for row in data["items"]} == {"company_1", "company_2"}
+        assert data["summary"] == {"total_reports": 11, "places": 2, "categories": 2}
+        assert data["agents"] == [
+            {"id": "company_1", "name": "DRC Women Peacebuilders"},
+            {"id": "company_2", "name": "Other Agent"},
+        ]
+
+        with TestClient(app) as client:
+            filtered_response = client.get("/api/v1/monitoring/incident-statistics?agent_id=company_2&page_size=1")
+
+        assert filtered_response.status_code == 200
+        filtered = filtered_response.json()
+        assert filtered["total"] == 1
+        assert filtered["items"][0]["company_id"] == "company_2"
+        assert filtered["items"][0]["place"] == "Bukavu"
     finally:
         app.dependency_overrides.clear()
         clear_database_caches()

@@ -36,6 +36,32 @@ class IncidentStatisticResponse(BaseModel):
     updated_at: datetime
 
 
+class IncidentStatisticsSummary(BaseModel):
+    """Aggregate values for the currently selected incident-statistics filter."""
+
+    total_reports: int
+    places: int
+    categories: int
+
+
+class IncidentStatisticsAgent(BaseModel):
+    """An agent that has reported at least one incident statistic."""
+
+    id: str
+    name: str
+
+
+class IncidentStatisticsPageResponse(BaseModel):
+    """A paginated, authenticated view of incident statistics."""
+
+    items: list[IncidentStatisticResponse]
+    total: int
+    page: int
+    page_size: int
+    summary: IncidentStatisticsSummary
+    agents: list[IncidentStatisticsAgent]
+
+
 class KnownPlaceResponse(BaseModel):
     id: int
     name: str
