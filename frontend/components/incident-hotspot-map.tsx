@@ -51,8 +51,13 @@ function place_key(value: string): string {
   return value.trim().toLocaleLowerCase()
 }
 
-function dot_size(reports: number): number {
-  return Math.round(Math.min(30, Math.max(16, 14 + Math.sqrt(reports) * 3)))
+const DOT_SIZE = 18
+
+function cluster_radius(category_count: number): number {
+  if (category_count < 2) return 0
+  // Arrange equal dots on a ring so neighboring categories touch, clearly
+  // communicating that they belong to the same place.
+  return DOT_SIZE / (2 * Math.sin(Math.PI / category_count))
 }
 
 function create_hotspots(
@@ -97,8 +102,7 @@ function create_hotspots(
     return reported_types.map((incident_type, index) => {
       const count = entry.counts[incident_type.name] ?? 0
       const angle = (2 * Math.PI * index) / reported_types.length - Math.PI / 2
-      // Fan categories out far enough that the largest dots never obscure one another.
-      const separation = reported_types.length > 1 ? 24 : 0
+      const separation = cluster_radius(reported_types.length)
       return {
         id: `${key}-${incident_type.name}`,
         place: known_place.name,
@@ -167,7 +171,6 @@ export function IncidentHotspotMap({
       >
         <MapViewport hotspots={hotspots} />
         {hotspots.map((hotspot) => {
-          const size = dot_size(hotspot.count)
           return (
             <AdvancedMarker
               key={hotspot.id}
@@ -186,8 +189,8 @@ export function IncidentHotspotMap({
                   role="button"
                   tabIndex={0}
                   style={{
-                    width: size,
-                    height: size,
+                    width: DOT_SIZE,
+                    height: DOT_SIZE,
                     backgroundColor: hotspot.color,
                   }}
                   onBlur={() => set_selected_hotspot(null)}
