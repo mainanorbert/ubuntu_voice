@@ -253,6 +253,8 @@ export default function DocumentsPage() {
   >(null)
   const [triggering_embed, set_triggering_embed] = useState(false)
   const [error, set_error] = useState<string | null>(null)
+  const [create_error, set_create_error] = useState<string | null>(null)
+  const [edit_error, set_edit_error] = useState<string | null>(null)
 
   const file_input_ref = useRef<HTMLInputElement | null>(null)
   const selected_company = companies.find((c) => c.id === selected_company_id)
@@ -332,7 +334,7 @@ export default function DocumentsPage() {
     const description = company_description.trim()
     if (!name || !email) return
     set_creating_company(true)
-    set_error(null)
+    set_create_error(null)
     try {
       const res = await fetch("/api/ingestion/companies", {
         method: "POST",
@@ -346,12 +348,12 @@ export default function DocumentsPage() {
       })
       const data: unknown = await res.json().catch(() => ({}))
       if (!res.ok) {
-        set_error(format_error_payload(data))
+        set_create_error(format_error_payload(data))
         return
       }
       const created = data as Partial<CompanyResponse>
       if (!created.id) {
-        set_error("Unexpected response")
+        set_create_error("The agent could not be created. Please try again.")
         return
       }
       set_company_name("")
@@ -366,6 +368,10 @@ export default function DocumentsPage() {
       )
       set_selected_company_id(created.id)
       if (queued_files.length > 0) set_pending_upload_company_id(created.id)
+    } catch {
+      set_create_error(
+        "The agent could not be created. Check your connection and try again."
+      )
     } finally {
       set_creating_company(false)
     }
@@ -383,12 +389,14 @@ export default function DocumentsPage() {
     set_edit_email(selected_company.email)
     set_edit_phone(selected_company.phone ?? "")
     set_edit_description(selected_company.description ?? "")
+    set_edit_error(null)
     set_error(null)
     set_editing_company(true)
   }, [selected_company])
 
   const cancel_editing_company = useCallback(() => {
     set_editing_company(false)
+    set_edit_error(null)
     set_error(null)
   }, [])
 
@@ -399,7 +407,7 @@ export default function DocumentsPage() {
     if (!name || !email) return
 
     set_saving_company(true)
-    set_error(null)
+    set_edit_error(null)
     try {
       const res = await fetch(
         `/api/ingestion/companies/${encodeURIComponent(selected_company.id)}`,
@@ -416,12 +424,12 @@ export default function DocumentsPage() {
       )
       const data: unknown = await res.json().catch(() => ({}))
       if (!res.ok) {
-        set_error(format_error_payload(data))
+        set_edit_error(format_error_payload(data))
         return
       }
       const updated = data as Partial<CompanyResponse>
       if (!updated.id) {
-        set_error("Unexpected response")
+        set_edit_error("The agent could not be updated. Please try again.")
         return
       }
       set_companies((current) =>
@@ -433,7 +441,7 @@ export default function DocumentsPage() {
       )
       set_editing_company(false)
     } catch {
-      set_error(
+      set_edit_error(
         "The agent could not be updated. Check your connection and try again."
       )
     } finally {
@@ -786,7 +794,10 @@ export default function DocumentsPage() {
               </div>
               <button
                 type="button"
-                onClick={() => set_show_create_form((value) => !value)}
+                onClick={() => {
+                  set_show_create_form((value) => !value)
+                  set_create_error(null)
+                }}
                 className="mt-5 flex h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-[#2563eb] text-lg font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
               >
                 <Plus className="size-5" /> New agent
@@ -795,17 +806,32 @@ export default function DocumentsPage() {
                 <div className="mt-3 space-y-2 rounded-xl border border-[#dce4ef] bg-[#f8fafc] p-3">
                   <input
                     value={company_name}
-                    onChange={(e) => set_company_name(e.target.value)}
+                    onChange={(e) => {
+                      set_company_name(e.target.value)
+                      set_create_error(null)
+                    }}
                     placeholder="Agent name *"
                     className="h-9 w-full rounded-lg border border-[#b9cdeb] bg-white px-3 text-sm"
                   />
                   <input
                     type="email"
                     value={company_email}
-                    onChange={(e) => set_company_email(e.target.value)}
+                    onChange={(e) => {
+                      set_company_email(e.target.value)
+                      set_create_error(null)
+                    }}
                     placeholder="Email *"
                     className="h-9 w-full rounded-lg border border-[#b9cdeb] bg-white px-3 text-sm"
                   />
+                  {create_error && (
+                    <div
+                      role="alert"
+                      aria-live="polite"
+                      className="rounded-lg border border-[#DC2626]/40 bg-[#DC2626]/10 px-3 py-2 text-sm text-[#DC2626]"
+                    >
+                      {create_error}
+                    </div>
+                  )}
                   <input
                     type="tel"
                     value={company_phone}
@@ -890,12 +916,22 @@ export default function DocumentsPage() {
                           id="edit-agent-email"
                           type="email"
                           value={edit_email}
-                          onChange={(event) =>
+                          onChange={(event) => {
                             set_edit_email(event.target.value)
-                          }
+                            set_edit_error(null)
+                          }}
                           required
                           className="mt-1 h-10 w-full rounded-lg border border-[#b9cdeb] bg-white px-3 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#60A5FA]/40"
                         />
+                        {edit_error && (
+                          <p
+                            role="alert"
+                            aria-live="polite"
+                            className="mt-2 rounded-lg border border-[#DC2626]/40 bg-[#DC2626]/10 px-3 py-2 text-sm text-[#DC2626]"
+                          >
+                            {edit_error}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label
@@ -1096,7 +1132,7 @@ export default function DocumentsPage() {
               <section className="overflow-hidden rounded-2xl border border-[#dce4ef] bg-white">
                 <div className="flex items-center justify-between gap-3 px-6 py-5">
                   <h2 className="font-serif text-xl text-[#061b3b]">
-                    Uploaded documents
+                    Knowledge Base
                   </h2>
                   <button
                     type="button"

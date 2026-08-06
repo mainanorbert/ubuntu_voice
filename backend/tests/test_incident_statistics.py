@@ -277,6 +277,28 @@ def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agen
         assert filtered["total"] == 1
         assert filtered["items"][0]["company_id"] == "company_2"
         assert filtered["items"][0]["place"] == "Bukavu"
+
+        with TestClient(app) as client:
+            updated = client.put(
+                "/api/v1/monitoring/incident-statistics/stat_1",
+                json={
+                    "place": "Goma City",
+                    "description": "Corrected report of casualties near Goma City.",
+                    "type": "Casualties",
+                    "total_count": 4,
+                },
+            )
+            deleted = client.delete("/api/v1/monitoring/incident-statistics/stat_2")
+
+        assert updated.status_code == 200
+        assert updated.json()["place"] == "Goma City"
+        assert updated.json()["total_count"] == 4
+        assert deleted.status_code == 204
+
+        with TestClient(app) as client:
+            missing = client.delete("/api/v1/monitoring/incident-statistics/stat_2")
+
+        assert missing.status_code == 404
     finally:
         app.dependency_overrides.clear()
         clear_database_caches()
