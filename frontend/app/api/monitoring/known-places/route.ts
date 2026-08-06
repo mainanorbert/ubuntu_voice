@@ -8,7 +8,9 @@ async function proxy(request: Request, method: string) {
   let body: string | undefined
   if (method !== "GET" && method !== "DELETE") body = await request.text()
   try {
-    const upstream = await fetch(`${get_backend_base_url()}/api/v1/monitoring/known-places${new URL(request.url).pathname.split("known-places")[1] ?? ""}`, {
+    const url = new URL(request.url)
+    const path_suffix = url.pathname.split("known-places")[1] ?? ""
+    const upstream = await fetch(`${get_backend_base_url()}/api/v1/monitoring/known-places${path_suffix}${url.search}`, {
       method, body, headers: { Authorization: `Bearer ${auth.token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, cache: "no-store",
     })
     if (upstream.status === 204) return new NextResponse(null, { status: 204 })
