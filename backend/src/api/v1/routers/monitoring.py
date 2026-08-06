@@ -3,9 +3,10 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from src.api.v1.schemas.monitoring import GuardrailEventResponse, IncidentStatisticResponse, KnownPlaceInput, KnownPlaceResponse
+from src.api.v1.schemas.monitoring import GuardrailEventResponse, IncidentStatisticResponse, IncidentStatisticsAgent, IncidentStatisticsPageResponse, IncidentStatisticsSummary, KnownPlaceInput, KnownPlaceResponse
 from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
 from src.core.dependencies import get_db_session
 from src.models import Company, GuardrailEvent, IncidentStatistic, KnownPlace
@@ -130,27 +131,52 @@ async def list_guardrail_events(
     return [build_guardrail_event_response(event) for event in events]
 
 
-@router.get("/incident-statistics", response_model=list[IncidentStatisticResponse])
+@router.get("/incident-statistics", response_model=IncidentStatisticsPageResponse)
 async def list_incident_statistics(
     session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
-    limit: Annotated[int, Query(ge=1, le=500)] = 200,
-) -> list[IncidentStatisticResponse]:
-    """Return incident statistics scoped to companies owned by the signed-in user."""
+    agent_id: Annotated[str | None, Query(min_length=1, max_length=36)] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> IncidentStatisticsPageResponse:
+    """Return paginated incident statistics from every agent to signed-in users."""
     identity = get_authenticated_user_identity(session_state)
-    user, _created = upsert_user(db_session, user_id=identity.user_id, email=identity.email)
+    upsert_user(db_session, user_id=identity.user_id, email=identity.email)
     db_session.commit()
 
+    base_query = db_session.query(IncidentStatistic).join(Company, Company.id == IncidentStatistic.company_id)
+    if agent_id is not None:
+        base_query = base_query.filter(IncidentStatistic.company_id == agent_id)
+
+    total = base_query.count()
+    total_reports, places, categories = base_query.with_entities(
+        func.coalesce(func.sum(IncidentStatistic.total_count), 0),
+        func.count(func.distinct(IncidentStatistic.normalized_place)),
+        func.count(func.distinct(IncidentStatistic.type)),
+    ).one()
     rows = (
-        db_session.query(IncidentStatistic, Company.name)
-        .join(Company, Company.id == IncidentStatistic.company_id)
-        .filter(Company.owner_id == user.id)
+        base_query.with_entities(IncidentStatistic, Company.name)
         .order_by(
             IncidentStatistic.total_count.desc(),
             IncidentStatistic.updated_at.desc(),
             IncidentStatistic.place.asc(),
         )
-        .limit(limit)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         .all()
     )
-    return [build_incident_statistic_response(row, company_name) for row, company_name in rows]
+    agents = (
+        db_session.query(Company.id, Company.name)
+        .join(IncidentStatistic, IncidentStatistic.company_id == Company.id)
+        .distinct()
+        .order_by(Company.name.asc())
+        .all()
+    )
+    return IncidentStatisticsPageResponse(
+        items=[build_incident_statistic_response(row, company_name) for row, company_name in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+        summary=IncidentStatisticsSummary(total_reports=int(total_reports), places=places, categories=categories),
+        agents=[IncidentStatisticsAgent(id=company_id, name=company_name) for company_id, company_name in agents],
+    )

@@ -13,10 +13,14 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const incoming_url = new URL(request.url)
-  const limit_param = incoming_url.searchParams.get("limit")
-  const upstream_url = new URL(`${get_backend_base_url()}/api/v1/monitoring/incident-statistics`)
-  if (limit_param) {
-    upstream_url.searchParams.set("limit", limit_param)
+  const upstream_url = new URL(
+    `${get_backend_base_url()}/api/v1/monitoring/incident-statistics`
+  )
+  for (const parameter of ["agent_id", "page", "page_size"]) {
+    const value = incoming_url.searchParams.get(parameter)
+    if (value) {
+      upstream_url.searchParams.set(parameter, value)
+    }
   }
 
   let upstream: Response
@@ -27,8 +31,10 @@ export async function GET(request: Request): Promise<NextResponse> {
     })
   } catch {
     return NextResponse.json(
-      { error: "Could not reach the API server. Is the backend running?" },
-      { status: 502 },
+      {
+        error: "The statistics service is unavailable. Please try again later.",
+      },
+      { status: 502 }
     )
   }
 
