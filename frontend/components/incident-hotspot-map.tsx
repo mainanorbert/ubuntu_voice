@@ -10,6 +10,8 @@ import {
 } from "@vis.gl/react-google-maps"
 
 export type IncidentStatistic = {
+  id?: string
+  company_name?: string
   place: string
   type: string
   total_count: number

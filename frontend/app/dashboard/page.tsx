@@ -1,9 +1,16 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ReactNode } from "react"
-import { BarChart3, Gauge, Home, Loader2, Map, ShieldAlert } from "lucide-react"
+import {
+  BarChart3,
+  Gauge,
+  Home,
+  Loader2,
+  Map as MapIcon,
+  ShieldAlert,
+} from "lucide-react"
 import { AppNavbar } from "@/components/app-navbar"
 import { IncidentHotspotMap } from "@/components/incident-hotspot-map"
 import type {
@@ -13,10 +20,12 @@ import type {
 
 type CurrentUser = { name: string | null }
 type Agent = { id: string; name: string }
+type StatisticsSummary = { total_reports: number; places: number }
 type IncidentStatisticsPage = {
   items: IncidentStatistic[]
   total: number
   agents: Agent[]
+  summary: StatisticsSummary
 }
 
 function is_incident_statistics_page(
@@ -27,7 +36,10 @@ function is_incident_statistics_page(
     value !== null &&
     Array.isArray((value as IncidentStatisticsPage).items) &&
     typeof (value as IncidentStatisticsPage).total === "number" &&
-    Array.isArray((value as IncidentStatisticsPage).agents)
+    Array.isArray((value as IncidentStatisticsPage).agents) &&
+    typeof (value as IncidentStatisticsPage).summary?.total_reports ===
+      "number" &&
+    typeof (value as IncidentStatisticsPage).summary?.places === "number"
   )
 }
 
@@ -40,6 +52,10 @@ export default function DashboardPage() {
   const [map_error, set_map_error] = useState<string | null>(null)
   const [map_agent_id, set_map_agent_id] = useState("")
   const [map_agents, set_map_agents] = useState<Agent[]>([])
+  const [summary, set_summary] = useState<StatisticsSummary>({
+    total_reports: 0,
+    places: 0,
+  })
   const map_agent_id_ref = useRef(map_agent_id)
 
   useEffect(() => {
@@ -91,6 +107,7 @@ export default function DashboardPage() {
           all_statistics.push(...statistics_data.items)
           total = statistics_data.total
           agents = statistics_data.agents
+          set_summary(statistics_data.summary)
           if (places_data !== null) set_known_places(places_data)
           page += 1
         } while (all_statistics.length < total)
@@ -134,6 +151,35 @@ export default function DashboardPage() {
   }, [load_hotspot_data])
 
   const name = user?.name || "Ubuntu Voice user"
+  const recent_activity = useMemo(
+    () =>
+      [...statistics]
+        .sort(
+          (left, right) =>
+            new Date(right.updated_at).getTime() -
+            new Date(left.updated_at).getTime()
+        )
+        .slice(0, 3),
+    [statistics]
+  )
+  const key_hotspots = useMemo(() => {
+    const totals = new globalThis.Map<
+      string,
+      { place: string; count: number }
+    >()
+    statistics.forEach((statistic) => {
+      const key = statistic.place.trim().toLocaleLowerCase()
+      const current = totals.get(key) ?? {
+        place: statistic.place.trim(),
+        count: 0,
+      }
+      current.count += Math.max(0, Number(statistic.total_count) || 0)
+      totals.set(key, current)
+    })
+    return [...totals.values()]
+      .sort((left, right) => right.count - left.count)
+      .slice(0, 3)
+  }, [statistics])
 
   return (
     <div className="min-h-svh bg-[#f7f9fc] text-[#061b3b]">
@@ -186,12 +232,17 @@ export default function DashboardPage() {
             className="mt-6 grid gap-3 lg:grid-cols-3"
             aria-label="Safety summary"
           >
-            <SummaryCard label="Active responders nearby" value="3" />
-            <SummaryCard label="Your open reports" value="1" />
             <SummaryCard
-              label="Connection"
-              value="Stable"
-              value_class="text-[#008575]"
+              label="Reporting agents"
+              value={format_count(map_agents.length)}
+            />
+            <SummaryCard
+              label="Reported cases"
+              value={format_count(summary.total_reports)}
+            />
+            <SummaryCard
+              label="Locations"
+              value={format_count(summary.places)}
             />
           </section>
 
@@ -202,7 +253,10 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-3 border-b border-[#dce4ef] px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
               <div>
                 <div className="flex items-center gap-2">
-                  <Map className="size-5 text-[#2563EB]" aria-hidden="true" />
+                  <MapIcon
+                    className="size-5 text-[#2563EB]"
+                    aria-hidden="true"
+                  />
                   <h2 id="hotspot-map-title" className="font-serif text-lg">
                     Incident hotspots
                   </h2>
@@ -279,38 +333,35 @@ export default function DashboardPage() {
 
           <section className="mt-6 grid gap-4 xl:grid-cols-[1.35fr_1fr]">
             <Panel title="Recent activity">
-              <ActivityRow
-                tone="red"
-                title="Incident reported near Kibera market"
-                detail="12 minutes ago · responder notified"
-              />
-              <ActivityRow
-                tone="blue"
-                title="Guidance requested on safe routes"
-                detail="1 hour ago · resolved"
-              />
-              <ActivityRow
-                tone="green"
-                title="Weekly safety check-in completed"
-                detail="Yesterday"
-              />
+              {map_loading ? (
+                <PanelMessage>Loading recent reported cases...</PanelMessage>
+              ) : recent_activity.length === 0 ? (
+                <PanelMessage>No reported cases yet.</PanelMessage>
+              ) : (
+                recent_activity.map((statistic) => (
+                  <ActivityRow
+                    key={statistic.id ?? `${statistic.place}-${statistic.type}`}
+                    tone={activity_tone(statistic.type)}
+                    title={`${statistic.type} reported in ${statistic.place}`}
+                    detail={`${statistic.company_name ?? "Community report"} · ${format_count(statistic.total_count)} total · ${format_timestamp(statistic.updated_at)}`}
+                  />
+                ))
+              )}
             </Panel>
-            <Panel title="Nearby responders">
-              <ResponderRow
-                name="Community safety desk"
-                distance="0.8 km away"
-                status="active"
-              />
-              <ResponderRow
-                name="Red Cross field unit"
-                distance="2.1 km away"
-                status="active"
-              />
-              <ResponderRow
-                name="Local mediator network"
-                distance="3.4 km away"
-                status="standby"
-              />
+            <Panel title="Key Hotspots">
+              {map_loading ? (
+                <PanelMessage>Loading reported areas...</PanelMessage>
+              ) : key_hotspots.length === 0 ? (
+                <PanelMessage>No reported hotspots yet.</PanelMessage>
+              ) : (
+                key_hotspots.map((hotspot) => (
+                  <HotspotRow
+                    key={hotspot.place.toLocaleLowerCase()}
+                    place={hotspot.place}
+                    count={hotspot.count}
+                  />
+                ))
+              )}
             </Panel>
           </section>
         </main>
@@ -358,6 +409,27 @@ function SummaryCard({
   )
 }
 
+function format_count(value: number): string {
+  return new Intl.NumberFormat().format(value)
+}
+
+function format_timestamp(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return "Recently"
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+function activity_tone(type: string): "red" | "blue" | "green" {
+  if (type === "Displacements") return "blue"
+  if (type === "Severe Hunger") return "green"
+  return "red"
+}
+
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-xl border border-[#dce4ef] bg-white px-4 py-4">
@@ -392,25 +464,16 @@ function ActivityRow({
   )
 }
 
-function ResponderRow({
-  name,
-  distance,
-  status,
-}: {
-  name: string
-  distance: string
-  status: "active" | "standby"
-}) {
+function PanelMessage({ children }: { children: ReactNode }) {
+  return <p className="py-2.5 text-sm text-[#607694]">{children}</p>
+}
+
+function HotspotRow({ place, count }: { place: string; count: number }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[#edf1f6] py-2.5 last:border-0">
-      <div className="min-w-0">
-        <p className="truncate font-serif text-base">{name}</p>
-        <p className="font-serif text-xs text-[#8aa0bd]">{distance}</p>
-      </div>
-      <span
-        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] ${status === "active" ? "bg-[#dff5ee] text-[#178574]" : "bg-[#fff0d9] text-[#a26500]"}`}
-      >
-        {status}
+      <p className="truncate font-serif text-base">{place}</p>
+      <span className="shrink-0 rounded-full bg-[#eef5ff] px-2.5 py-1 text-xs font-medium text-[#1E3A8A] dark:bg-[#1E3A8A] dark:text-white">
+        {format_count(count)} cases
       </span>
     </div>
   )
