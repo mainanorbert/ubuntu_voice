@@ -1181,7 +1181,7 @@ export default function ChatPage() {
                 className="w-full shrink-0 rounded-full border-[#dce4ef] text-[#607694] sm:w-auto"
                 asChild
               >
-                <Link href="/documents">Manage documents</Link>
+                <Link href="/documents">Manage Agents</Link>
               </Button>
             </div>
           </div>

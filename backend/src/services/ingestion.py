@@ -55,7 +55,7 @@ def get_or_create_company(
     phone: str | None,
     description: str | None,
 ) -> tuple[Company, bool]:
-    """Create an agent and reject email addresses already assigned to an agent."""
+    """Create an agent while returning clear conflicts for unique fields."""
     normalized_email = email.strip().lower()
     existing = session.query(Company).filter(Company.email == normalized_email).one_or_none()
     if existing is not None:
@@ -67,6 +67,12 @@ def get_or_create_company(
     normalized_name = name.strip()
     if not normalized_name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Company name cannot be empty.")
+    existing_name = session.query(Company).filter(Company.name == normalized_name).one_or_none()
+    if existing_name is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This agent name is already in use. Choose a different name.",
+        )
 
     company = Company(
         name=normalized_name,
