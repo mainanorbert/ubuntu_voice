@@ -100,6 +100,43 @@ def test_agent_update_rejects_duplicate_email(tmp_path, monkeypatch) -> None:
         clear_database_caches()
 
 
+def test_agent_creation_rejects_duplicate_name(tmp_path, monkeypatch) -> None:
+    """Creating an agent with an existing name returns a clean conflict."""
+    app, clear_database_caches, _install_user_override = configure_test_app(tmp_path, monkeypatch)
+
+    try:
+        with TestClient(app) as client:
+            create_agent(client, name="DRC Women Peacebuilders", email="drc@example.org")
+
+            response = client.post(
+                "/api/v1/companies",
+                json={"name": "DRC Women Peacebuilders", "email": "another@example.org"},
+            )
+
+            assert response.status_code == 409
+            assert response.json()["detail"] == "This agent name is already in use. Choose a different name."
+    finally:
+        app.dependency_overrides.clear()
+        clear_database_caches()
+
+
+def test_agent_can_be_deleted_by_its_owner(tmp_path, monkeypatch) -> None:
+    """Deleting an agent removes it from the owner's agent list."""
+    app, clear_database_caches, _install_user_override = configure_test_app(tmp_path, monkeypatch)
+
+    try:
+        with TestClient(app) as client:
+            agent = create_agent(client, name="Agent To Remove", email="remove@example.org")
+
+            response = client.delete(f"/api/v1/companies/{agent['id']}")
+
+            assert response.status_code == 204
+            assert all(item["id"] != agent["id"] for item in client.get("/api/v1/companies").json())
+    finally:
+        app.dependency_overrides.clear()
+        clear_database_caches()
+
+
 def test_agent_update_is_owner_scoped(tmp_path, monkeypatch) -> None:
     """A signed-in user cannot edit another user's agent profile."""
     app, clear_database_caches, install_user_override = configure_test_app(tmp_path, monkeypatch)

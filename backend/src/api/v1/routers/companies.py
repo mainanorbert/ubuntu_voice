@@ -22,7 +22,18 @@ from src.api.v1.schemas.ingestion import (
 from src.core.auth import UserIdentity, get_authenticated_user_identity, is_admin_email, require_auth_session
 from src.core.config import Settings
 from src.core.dependencies import get_db_session, get_settings
-from src.models import Company, Document, DocumentChunk, generate_uuid
+from src.models import (
+    Company,
+    Document,
+    DocumentChunk,
+    EvaluationQuestion,
+    EvaluationResult,
+    EvaluationRun,
+    GuardrailEvent,
+    IncidentStatistic,
+    WhatsAppAgentSession,
+    generate_uuid,
+)
 from src.services.embedding_pipeline import run_embedding_pipeline_for_company
 from src.services.ingestion import (
     StoredDocumentFile,
@@ -191,6 +202,71 @@ async def patch_company(
     db_session.commit()
     db_session.refresh(company)
     return build_company_response(company)
+
+
+@router.delete("/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_company(
+    company_id: str,
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> None:
+    """Permanently delete an owned agent and all associated data."""
+    identity = get_authenticated_user_identity(session_state)
+    company = get_owned_company(db_session, company_id=company_id, owner_id=identity.user_id)
+    documents = list_documents(db_session, company_id=company.id)
+
+    try:
+        # Remove external files first. Missing objects are safe to retry; if a
+        # storage request fails, keep the database records so deletion can be retried.
+        for document in documents:
+            await delete_stored_document_file(settings=settings, file_path=document.file_path)
+    except ExternalStorageError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="The agent files could not be removed from storage. Please try again.",
+        ) from exc
+
+    try:
+        run_ids = [
+            run_id
+            for (run_id,) in db_session.query(EvaluationRun.id)
+            .filter(EvaluationRun.company_id == company.id)
+            .all()
+        ]
+        if run_ids:
+            db_session.query(EvaluationResult).filter(EvaluationResult.run_id.in_(run_ids)).delete(
+                synchronize_session=False
+            )
+        db_session.query(EvaluationRun).filter(EvaluationRun.company_id == company.id).delete(
+            synchronize_session=False
+        )
+        db_session.query(EvaluationQuestion).filter(EvaluationQuestion.company_id == company.id).delete(
+            synchronize_session=False
+        )
+        db_session.query(IncidentStatistic).filter(IncidentStatistic.company_id == company.id).delete(
+            synchronize_session=False
+        )
+        db_session.query(GuardrailEvent).filter(GuardrailEvent.company_id == company.id).delete(
+            synchronize_session=False
+        )
+        db_session.query(WhatsAppAgentSession).filter(WhatsAppAgentSession.company_id == company.id).delete(
+            synchronize_session=False
+        )
+        db_session.query(DocumentChunk).filter(DocumentChunk.company_id == company.id).delete(
+            synchronize_session=False
+        )
+        db_session.query(Document).filter(Document.company_id == company.id).delete(
+            synchronize_session=False
+        )
+        db_session.delete(company)
+        db_session.commit()
+    except SQLAlchemyError as exc:
+        db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The agent could not be deleted. Please try again.",
+        ) from exc
 
 
 @router.get("/{company_id}/documents", response_model=CompanyWithDocumentsResponse)

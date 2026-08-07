@@ -9,6 +9,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Search,
   Trash2,
   Upload,
   X,
@@ -244,6 +245,7 @@ export default function DocumentsPage() {
   const [company_email, set_company_email] = useState("")
   const [company_phone, set_company_phone] = useState("")
   const [company_description, set_company_description] = useState("")
+  const [agent_search, set_agent_search] = useState("")
   const [show_create_form, set_show_create_form] = useState(false)
   const [editing_company, set_editing_company] = useState(false)
   const [edit_name, set_edit_name] = useState("")
@@ -260,6 +262,7 @@ export default function DocumentsPage() {
   const [page_loading, set_page_loading] = useState(true)
   const [creating_company, set_creating_company] = useState(false)
   const [saving_company, set_saving_company] = useState(false)
+  const [deleting_company_id, set_deleting_company_id] = useState<string | null>(null)
   const [list_loading, set_list_loading] = useState(false)
   const [uploading, set_uploading] = useState(false)
   const [deleting_document_id, set_deleting_document_id] = useState<
@@ -273,6 +276,14 @@ export default function DocumentsPage() {
 
   const file_input_ref = useRef<HTMLInputElement | null>(null)
   const selected_company = companies.find((c) => c.id === selected_company_id)
+  const normalized_agent_search = agent_search.trim().toLowerCase()
+  const visible_companies = normalized_agent_search
+    ? companies.filter(
+        (company) =>
+          company.name.toLowerCase().includes(normalized_agent_search) ||
+          company.email.toLowerCase().includes(normalized_agent_search)
+      )
+    : companies
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -473,6 +484,41 @@ export default function DocumentsPage() {
     saving_company,
     selected_company,
   ])
+
+  const delete_company = useCallback(async () => {
+    if (!selected_company || deleting_company_id || uploading) return
+    if (
+      !window.confirm(
+        `Delete “${selected_company.name}”? This permanently removes the agent, all documents, embeddings, and related records. This action cannot be undone.`
+      )
+    ) {
+      return
+    }
+
+    set_deleting_company_id(selected_company.id)
+    set_error(null)
+    try {
+      const res = await fetch(
+        `/api/ingestion/companies/${encodeURIComponent(selected_company.id)}`,
+        { method: "DELETE" }
+      )
+      if (!res.ok) {
+        const data: unknown = await res.json().catch(() => ({}))
+        set_error(format_error_payload(data))
+        return
+      }
+      set_documents([])
+      set_editing_company(false)
+      set_pending_upload_company_id((current) =>
+        current === selected_company.id ? null : current
+      )
+      await load_companies()
+    } catch {
+      set_error("The agent could not be deleted. Please try again.")
+    } finally {
+      set_deleting_company_id(null)
+    }
+  }, [deleting_company_id, load_companies, selected_company, uploading])
 
   // ── File queue management ──────────────────────────────────────────────────
 
@@ -754,13 +800,29 @@ export default function DocumentsPage() {
                   <RefreshCw className="size-4" />
                 </button>
               </div>
+              <label className="relative mt-4 block">
+                <span className="sr-only">Search agents by name or email</span>
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8aa0bd]" />
+                <input
+                  type="search"
+                  value={agent_search}
+                  onChange={(event) => set_agent_search(event.target.value)}
+                  placeholder="Search by name or email"
+                  aria-label="Search agents by name or email"
+                  className="h-10 w-full rounded-lg border border-[#b9cdeb] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#60A5FA]"
+                />
+              </label>
               <div className="mt-4 flex flex-col gap-3">
                 {companies.length === 0 ? (
                   <p className="py-8 text-center text-sm text-[#8aa0bd]">
                     No agents yet. Create one to upload documents.
                   </p>
+                ) : visible_companies.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-[#8aa0bd]">
+                    No agents match your search.
+                  </p>
                 ) : (
-                  companies.map((c) => (
+                  visible_companies.map((c) => (
                     <button
                       type="button"
                       key={c.id}
@@ -908,15 +970,34 @@ export default function DocumentsPage() {
                       </h2>
                     </div>
                     {!editing_company ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="gap-2 border-[#2563EB] text-[#2563EB] hover:bg-[#eff6ff] hover:text-[#1E3A8A]"
-                        onClick={start_editing_company}
-                      >
-                        <Pencil className="size-4" />
-                        Edit profile
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="gap-2 border-[#2563EB] text-[#2563EB] hover:bg-[#eff6ff] hover:text-[#1E3A8A]"
+                          onClick={start_editing_company}
+                          disabled={deleting_company_id !== null}
+                        >
+                          <Pencil className="size-4" />
+                          Edit profile
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          className="gap-2"
+                          onClick={() => void delete_company()}
+                          disabled={deleting_company_id !== null || uploading}
+                        >
+                          {deleting_company_id === selected_company.id ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-4" />
+                          )}
+                          {deleting_company_id === selected_company.id
+                            ? "Deleting…"
+                            : "Delete agent"}
+                        </Button>
+                      </div>
                     ) : null}
                   </div>
 
