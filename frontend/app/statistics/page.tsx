@@ -7,7 +7,6 @@ import {
   Pencil,
   RefreshCw,
   ShieldAlert,
-  Table2,
   Trash2,
 } from "lucide-react"
 import { FormEvent, useCallback, useEffect, useState } from "react"
@@ -309,11 +308,11 @@ export default function StatisticsPage() {
           </div>
           <div className="rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-medium text-[#607694]">
-              <Table2 className="size-4 text-[#2864e8]" />
-              Categories
+              <ShieldAlert className="size-4 text-[#2864e8]" />
+              Total reported cases
             </div>
             <p className="mt-3 text-2xl font-semibold text-[#061b3b]">
-              {format_count(summary.categories)}
+              {format_count(summary.total_reports)}
             </p>
           </div>
         </section>

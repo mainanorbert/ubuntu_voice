@@ -852,7 +852,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     scroll_to_bottom()
-  }, [messages, scroll_to_bottom])
+  }, [messages, pending, scroll_to_bottom])
 
   useEffect(() => {
     fetch("/api/auth/me", { cache: "no-store" })
@@ -1280,6 +1280,32 @@ export default function ChatPage() {
                 </div>
               ))
             )}
+            {pending ? (
+              <div
+                className="flex flex-col items-start gap-1.5"
+                role="status"
+                aria-live="polite"
+                aria-label="Ubuntu Voice is thinking"
+              >
+                <div className="flex min-w-0 max-w-[88%] items-start gap-2">
+                  <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full border border-[#60A5FA]/50 bg-[#F8FAFC] text-[#2563EB]">
+                    <BrainCircuit className="size-3.5" aria-hidden />
+                  </div>
+                  <div className="flex items-center gap-2 rounded-2xl rounded-tl-md border border-[#60A5FA]/40 bg-[#F8FAFC] px-3.5 py-2.5 text-sm text-[#1E3A8A] shadow-sm">
+                    <span>Thinking</span>
+                    <span className="flex items-center gap-1" aria-hidden>
+                      {[0, 1, 2].map((index) => (
+                        <span
+                          key={index}
+                          className="ubuntu-chat-dot size-1.5 rounded-full bg-[#2563EB]"
+                          style={{ animationDelay: `${index * 160}ms` }}
+                        />
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : null}
             <div ref={list_end_ref} />
           </div>
 
