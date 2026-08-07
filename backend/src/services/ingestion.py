@@ -74,6 +74,8 @@ def get_or_create_company(
         phone=phone,
         description=description,
         owner_id=owner_id,
+        is_approved=False,
+        approval_status="unapproved",
     )
     session.add(company)
     session.flush()

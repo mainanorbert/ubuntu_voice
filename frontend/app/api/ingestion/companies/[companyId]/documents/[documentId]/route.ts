@@ -26,7 +26,7 @@ export async function DELETE(
     })
   } catch {
     return NextResponse.json(
-      { error: "Could not reach the API server. Is the backend running?" },
+      { error: "Ubuntu Voice is temporarily unavailable. Please try again in a moment." },
       { status: 502 }
     )
   }

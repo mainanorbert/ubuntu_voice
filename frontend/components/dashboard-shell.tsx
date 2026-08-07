@@ -4,6 +4,7 @@ import { BarChart3, Gauge, Home, ShieldAlert, Table2 } from "lucide-react"
 import { AppNavbar } from "@/components/app-navbar"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
@@ -27,6 +28,18 @@ type DashboardShellProps = {
  */
 export function DashboardShell({ children, title, description }: DashboardShellProps) {
   const pathname = usePathname()
+  const [is_admin, set_is_admin] = useState(false)
+
+  useEffect(() => {
+    void fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((profile: { is_admin?: unknown } | null) => set_is_admin(profile?.is_admin === true))
+      .catch(() => set_is_admin(false))
+  }, [])
+
+  const visible_links = is_admin
+    ? [...dashboard_links, { href: "/admin", label: "Agent approvals", icon: ShieldAlert }]
+    : dashboard_links
 
   return (
     <div className="min-h-svh bg-[#f7f9fc] text-[#061b3b]">
@@ -35,7 +48,7 @@ export function DashboardShell({ children, title, description }: DashboardShellP
       <div className="mx-auto flex max-w-[1900px] flex-col md:min-h-[calc(100svh-68px)] md:flex-row">
         <aside className="border-b border-[#dce4ef] bg-white p-2 md:w-56 md:shrink-0 md:border-b-0 md:border-r md:p-3">
           <nav className="grid grid-cols-2 gap-1 sm:grid-cols-4 md:flex md:flex-col" aria-label="Dashboard navigation">
-            {dashboard_links.map((link) => {
+            {visible_links.map((link) => {
               const Icon = link.icon
               const is_active = pathname === link.href
 

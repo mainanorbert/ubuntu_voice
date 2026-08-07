@@ -1,4 +1,5 @@
 """Routes for company management and multi-file document ingestion."""
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.api.v1.schemas.ingestion import (
     CompanyCreateRequest,
+    AgentApprovalRequest,
     CompanyResponse,
     CompanyUpdateRequest,
     CompanyWithDocumentsResponse,
@@ -17,7 +19,7 @@ from src.api.v1.schemas.ingestion import (
     DocumentUploadTicket,
     EmbedTriggerResponse,
 )
-from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
+from src.core.auth import UserIdentity, get_authenticated_user_identity, is_admin_email, require_auth_session
 from src.core.config import Settings
 from src.core.dependencies import get_db_session, get_settings
 from src.models import Company, Document, DocumentChunk, generate_uuid
@@ -59,6 +61,10 @@ def build_company_response(company) -> CompanyResponse:
         phone=company.phone,
         description=company.description,
         owner_id=company.owner_id,
+        is_approved=company.is_approved,
+        approval_status=company.approval_status,
+        approved_by=company.approved_by,
+        approved_at=company.approved_at,
         created_at=company.created_at,
     )
 
@@ -79,6 +85,12 @@ def build_document_response(document) -> DocumentResponse:
     )
 
 
+def require_admin(identity: UserIdentity, settings: Settings) -> None:
+    """Reject users whose email is not explicitly configured as an admin."""
+    if not is_admin_email(identity.email, settings.admin_emails):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator access is required.")
+
+
 @router.get("", response_model=list[CompanyResponse])
 async def get_companies(
     session_state: Annotated[UserIdentity, Depends(require_auth_session)],
@@ -95,8 +107,44 @@ async def get_public_companies(
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> list[CompanyResponse]:
     """List available agents for the public chat and agent directory."""
+    companies = db_session.query(Company).filter(Company.is_approved.is_(True)).order_by(Company.created_at.desc()).all()
+    return [build_company_response(c) for c in companies]
+
+
+@router.get("/admin", response_model=list[CompanyResponse])
+async def get_admin_companies(
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> list[CompanyResponse]:
+    """List every agent for configured administrators only."""
+    identity = get_authenticated_user_identity(session_state)
+    require_admin(identity, settings)
     companies = db_session.query(Company).order_by(Company.created_at.desc()).all()
     return [build_company_response(c) for c in companies]
+
+
+@router.patch("/{company_id}/approval", response_model=CompanyResponse)
+async def patch_agent_approval(
+    company_id: str,
+    body: AgentApprovalRequest,
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> CompanyResponse:
+    """Approve or suspend an agent, restricted to ADMIN_EMAILS."""
+    identity = get_authenticated_user_identity(session_state)
+    require_admin(identity, settings)
+    company = db_session.get(Company, company_id)
+    if company is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
+    company.is_approved = body.approved
+    company.approval_status = "approved" if body.approved else "suspended"
+    company.approved_by = identity.email if body.approved else None
+    company.approved_at = datetime.now(timezone.utc) if body.approved else None
+    db_session.commit()
+    db_session.refresh(company)
+    return build_company_response(company)
 
 
 @router.post("", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED)

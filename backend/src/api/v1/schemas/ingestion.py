@@ -107,7 +107,17 @@ class CompanyResponse(BaseModel):
     phone: str | None
     description: str | None
     owner_id: str
+    is_approved: bool
+    approval_status: Literal["approved", "unapproved", "suspended"]
+    approved_by: str | None = None
+    approved_at: datetime | None = None
     created_at: datetime
+
+
+class AgentApprovalRequest(BaseModel):
+    """Admin action that makes an agent available or unavailable for chat."""
+
+    approved: bool
 
 
 class DocumentResponse(BaseModel):

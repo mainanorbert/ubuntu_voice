@@ -18,7 +18,7 @@ import type {
   KnownPlace,
 } from "@/components/incident-hotspot-map"
 
-type CurrentUser = { name: string | null }
+type CurrentUser = { name: string | null; is_admin?: boolean }
 type Agent = { id: string; name: string }
 type StatisticsSummary = { total_reports: number; places: number }
 type IncidentStatisticsPage = {
@@ -213,6 +213,13 @@ export default function DashboardPage() {
               label="Statistics"
               icon={BarChart3}
             />
+            {user?.is_admin ? (
+              <DashboardLink
+                href="/admin"
+                label="Agent approvals"
+                icon={ShieldAlert}
+              />
+            ) : null}
           </nav>
         </aside>
 

@@ -89,7 +89,12 @@ def build_whatsapp_participant_hash(*, phone_number: str, secret: str) -> str:
 
 def list_whatsapp_agents(db_session: Session) -> list[Company]:
     """List all currently registered agents in stable menu order."""
-    return db_session.query(Company).order_by(Company.created_at.asc(), Company.id.asc()).all()
+    return (
+        db_session.query(Company)
+        .filter(Company.is_approved.is_(True))
+        .order_by(Company.created_at.asc(), Company.id.asc())
+        .all()
+    )
 
 
 def format_whatsapp_agent_menu(companies: list[Company], *, invalid_selection: bool = False) -> str:

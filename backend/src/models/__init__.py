@@ -87,6 +87,17 @@ class Company(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
+    # Existing agents remain available after rollout; newly-created agents are
+    # explicitly inserted as pending by the ingestion service.
+    is_approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true", index=True)
+    approval_status: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="approved",
+        server_default="approved",
+    )
+    approved_by: Mapped[str | None] = mapped_column(Text, nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
