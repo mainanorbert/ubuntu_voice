@@ -51,7 +51,7 @@ async def post_agent_chat(
         identity = get_authenticated_user_identity(session_state)
         user, _created = upsert_user(db_session, user_id=identity.user_id, email=identity.email)
     company = db_session.query(Company).filter(Company.id == body.company_id).one_or_none()
-    if company is None:
+    if company is None or not company.is_approved:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
     db_session.commit()
 

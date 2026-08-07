@@ -9,6 +9,12 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
+    admin_emails: str = Field(
+        default="",
+        validation_alias=AliasChoices("ADMIN_EMAILS"),
+        description="Comma-separated email addresses allowed to approve or suspend agents.",
+    )
+
     openrouter_api_key: str = Field(..., description="OpenRouter API key")
     openrouter_base_url: str = Field(
         default="https://openrouter.ai/api/v1",

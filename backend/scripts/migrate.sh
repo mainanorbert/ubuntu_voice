@@ -15,4 +15,4 @@ if [ -f .env ]; then
   set +o allexport
 fi
 
-exec uv run alembic upgrade head
+exec uv run python -m alembic upgrade head

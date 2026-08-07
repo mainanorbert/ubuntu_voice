@@ -25,7 +25,7 @@ async function proxy_evaluation_request(
       cache: "no-store",
     })
   } catch {
-    return NextResponse.json({ error: "Could not reach the API server." }, { status: 502 })
+    return NextResponse.json({ error: "Ubuntu Voice is temporarily unavailable. Please try again in a moment." }, { status: 502 })
   }
 
   if (upstream.status === 204) return new NextResponse(null, { status: 204 })

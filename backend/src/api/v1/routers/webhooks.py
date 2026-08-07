@@ -227,7 +227,7 @@ async def handle_twilio_whatsapp_webhook(
         reply = format_whatsapp_agent_menu(companies)
     else:
         company = db_session.get(Company, whatsapp_session.company_id)
-        if company is None:
+        if company is None or not company.is_approved:
             companies = list_whatsapp_agents(db_session)
             whatsapp_session.company_id = None
             whatsapp_session.last_activity_at = datetime.now(timezone.utc)

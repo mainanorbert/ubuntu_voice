@@ -27,6 +27,8 @@ type CompanyResponse = {
   phone: string | null
   description: string | null
   owner_id: string
+  is_approved: boolean
+  approval_status: "approved" | "unapproved" | "suspended"
   created_at: string
 }
 
@@ -114,6 +116,18 @@ function format_short_date(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
   })
+}
+
+function approval_status_label(status: CompanyResponse["approval_status"]): string {
+  if (status === "approved") return "Approved"
+  if (status === "suspended") return "Suspended"
+  return "Unapproved"
+}
+
+function approval_status_class(status: CompanyResponse["approval_status"]): string {
+  if (status === "approved") return "bg-green-100 text-green-800"
+  if (status === "suspended") return "bg-red-100 text-[#DC2626]"
+  return "bg-amber-100 text-amber-800"
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -254,6 +268,7 @@ export default function DocumentsPage() {
   const [triggering_embed, set_triggering_embed] = useState(false)
   const [error, set_error] = useState<string | null>(null)
   const [create_error, set_create_error] = useState<string | null>(null)
+  const [create_notice, set_create_notice] = useState<string | null>(null)
   const [edit_error, set_edit_error] = useState<string | null>(null)
 
   const file_input_ref = useRef<HTMLInputElement | null>(null)
@@ -361,6 +376,9 @@ export default function DocumentsPage() {
       set_company_phone("")
       set_company_description("")
       set_show_create_form(false)
+      set_create_notice(
+        "Your agent was created and is awaiting approval. All agents must be approved before they can be used in chat or WhatsApp."
+      )
       set_companies((prev) =>
         prev.some((c) => c.id === created.id)
           ? prev
@@ -770,6 +788,14 @@ export default function DocumentsPage() {
                             ? `${documents.length} documents`
                             : "View documents"}
                         </span>
+                        <span
+                          className={cn(
+                            "mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                            approval_status_class(c.approval_status)
+                          )}
+                        >
+                          {approval_status_label(c.approval_status)}
+                        </span>
                       </span>
                       {(c.phone || c.description) && (
                         <span
@@ -861,6 +887,14 @@ export default function DocumentsPage() {
                   </Button>
                 </div>
               )}
+              {create_notice ? (
+                <p
+                  role="status"
+                  className="mt-3 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-3 text-sm leading-relaxed text-[#1E3A8A]"
+                >
+                  {create_notice}
+                </p>
+              ) : null}
             </aside>
 
             <div className="min-w-0 space-y-6">

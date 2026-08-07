@@ -228,6 +228,6 @@ function read_oauth_error(error: string | null): string | null {
   if (!error) return null
   if (error === "google_not_configured") return "Google sign-in is not configured."
   if (error === "google_state") return "Google sign-in expired. Please try again."
-  if (error === "api_unavailable") return "Could not reach the API server."
+  if (error === "api_unavailable") return "Ubuntu Voice is temporarily unavailable. Please try again in a moment."
   return "Google sign-in failed. Please try again."
 }

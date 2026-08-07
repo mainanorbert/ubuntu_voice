@@ -18,7 +18,7 @@ export async function GET(): Promise<NextResponse> {
     })
   } catch {
     return NextResponse.json(
-      { error: "Could not reach the API server. Is the backend running?" },
+      { error: "Ubuntu Voice is temporarily unavailable. Please try again in a moment." },
       { status: 502 },
     )
   }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     })
   } catch {
     return NextResponse.json(
-      { error: "Could not reach the API server. Is the backend running?" },
+      { error: "Ubuntu Voice is temporarily unavailable. Please try again in a moment." },
       { status: 502 },
     )
   }

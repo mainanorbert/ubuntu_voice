@@ -33,6 +33,15 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
+def is_admin_email(email: str | None, admin_emails: str) -> bool:
+    """Return whether an email is explicitly listed in ADMIN_EMAILS."""
+    if not email:
+        return False
+    return normalize_email(email) in {
+        normalize_email(value) for value in admin_emails.split(",") if value.strip()
+    }
+
+
 def generate_user_id() -> str:
     """Return a local text user ID compatible with existing foreign keys."""
     return f"user_{secrets.token_urlsafe(18)}"

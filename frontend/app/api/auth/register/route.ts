@@ -28,7 +28,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       cache: "no-store",
     })
   } catch {
-    return NextResponse.json({ error: "Could not reach the API server." }, { status: 502 })
+    return NextResponse.json({ error: "Ubuntu Voice is temporarily unavailable. Please try again in a moment." }, { status: 502 })
   }
 
   const content_type = upstream.headers.get("content-type") ?? ""

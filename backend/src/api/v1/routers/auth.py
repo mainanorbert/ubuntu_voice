@@ -16,7 +16,7 @@ from src.api.v1.schemas.auth import (
     PasswordResetRequest,
     RegistrationPendingResponse,
 )
-from src.core.auth import UserIdentity, require_auth_session
+from src.core.auth import UserIdentity, is_admin_email, require_auth_session
 from src.core.config import Settings
 from src.core.dependencies import get_db_session, get_settings
 from src.services.auth import (
@@ -41,7 +41,7 @@ PASSWORD_RESET_MESSAGE = "If an account with that email can use password sign-in
 EMAIL_VERIFICATION_MESSAGE = "Check your inbox to confirm your email and finish creating your account."
 
 
-def build_user_response(user: User) -> AuthUserResponse:
+def build_user_response(user: User, settings: Settings | None = None) -> AuthUserResponse:
     """Serialize a local user row for account UI."""
     return AuthUserResponse(
         id=user.id,
@@ -49,6 +49,7 @@ def build_user_response(user: User) -> AuthUserResponse:
         name=user.name,
         avatar_url=user.avatar_url,
         created_at=user.created_at,
+        is_admin=is_admin_email(user.email, settings.admin_emails) if settings is not None else False,
     )
 
 
@@ -172,6 +173,7 @@ async def post_auth_google(
 @router.get("/me", response_model=AuthUserResponse)
 async def get_auth_me(
     identity: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> AuthUserResponse:
     """Return the local profile for the authenticated session."""
@@ -181,4 +183,4 @@ async def get_auth_me(
         db_session.add(user)
         db_session.commit()
         db_session.refresh(user)
-    return build_user_response(user)
+    return build_user_response(user, settings)
