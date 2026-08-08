@@ -4,6 +4,7 @@ Ubuntu Voice is a privacy-first, low-bandwidth RAG platform for community peace 
 
 ## Demo Links
 
+- [Video Demo](https://youtu.be/_O3LJtk8dBo)
 - [Evaluation demo](https://www.awesomescreenshot.com/video/53310423?key=ca040dc0ce523077c0dd6cd103060e76)
 - [Project functional features demo](https://www.awesomescreenshot.com/video/52685415?key=9ffcc28ae89115643f739778fab83759)
 
