@@ -9,6 +9,12 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
+    environment: str = Field(
+        default="development",
+        validation_alias=AliasChoices("ENVIRONMENT"),
+        description="Runtime environment, such as development, staging, or production.",
+    )
+
     admin_emails: str = Field(
         default="",
         validation_alias=AliasChoices("ADMIN_EMAILS"),

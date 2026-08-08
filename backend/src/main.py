@@ -47,8 +47,18 @@ def maybe_install_cors_middleware(*, app: FastAPI, settings: Settings) -> None:
     )
 
 
-app = FastAPI(title="Customer Support SaaS", version="0.1.0", lifespan=lifespan)
-maybe_install_cors_middleware(app=app, settings=get_settings())
+settings = get_settings()
+is_production = settings.environment.strip().lower() == "production"
+
+app = FastAPI(
+    title="Customer Support SaaS",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=None if is_production else "/docs",
+    redoc_url=None if is_production else "/redoc",
+    openapi_url=None if is_production else "/openapi.json",
+)
+maybe_install_cors_middleware(app=app, settings=settings)
 app.include_router(agents.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
