@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import {
   Loader2,
   MapPin,
@@ -38,6 +37,7 @@ type StatisticsPage = {
   summary: StatisticsSummary
   agents: Agent[]
 }
+type AuthProfile = { is_admin?: unknown }
 
 const INCIDENT_TYPES = [
   "Rights Violations",
@@ -113,6 +113,7 @@ function type_badge_class(type: string): string {
 
 export default function StatisticsPage() {
   const [rows, set_rows] = useState<IncidentStatisticResponse[]>([])
+  const [is_admin, set_is_admin] = useState(false)
   const [loading, set_loading] = useState(true)
   const [refreshing, set_refreshing] = useState(false)
   const [error, set_error] = useState<string | null>(null)
@@ -186,6 +187,16 @@ export default function StatisticsPage() {
     const initial_load = window.setTimeout(() => void load_rows("initial"), 0)
     return () => window.clearTimeout(initial_load)
   }, [load_rows])
+
+  useEffect(() => {
+    void fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return
+        const profile: AuthProfile = await response.json()
+        set_is_admin(profile.is_admin === true)
+      })
+      .catch(() => set_is_admin(false))
+  }, [])
 
   const total_pages = Math.max(1, Math.ceil(total / page_size))
 
@@ -278,15 +289,6 @@ export default function StatisticsPage() {
       description="Monitor reported incidents by agent, location, and category."
     >
       <div className="flex flex-col gap-6">
-        <div>
-          <Link
-            href="/places"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#2563EB] px-3 py-2 text-sm font-medium text-white hover:bg-[#1E3A8A] focus-visible:ring-2 focus-visible:ring-[#60A5FA] focus-visible:outline-none"
-          >
-            {" "}
-            <MapPin className="size-4" /> Manage known places
-          </Link>
-        </div>
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-medium text-[#607694]">
@@ -365,7 +367,7 @@ export default function StatisticsPage() {
             </div>
           </div>
 
-          {editing_row && edit_form ? (
+          {is_admin && editing_row && edit_form ? (
             <form
               onSubmit={save_edit}
               className="border-b border-[#dce4ef] bg-[#F8FAFC] px-5 py-5"
@@ -474,7 +476,9 @@ export default function StatisticsPage() {
                     <th className="px-5 py-3 font-medium">Type</th>
                     <th className="px-5 py-3 font-medium">Total count</th>
                     <th className="px-5 py-3 font-medium">Updated</th>
-                    <th className="px-5 py-3 font-medium">Actions</th>
+                    {is_admin ? (
+                      <th className="px-5 py-3 font-medium">Actions</th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -507,33 +511,35 @@ export default function StatisticsPage() {
                       <td className="px-5 py-4 text-muted-foreground">
                         {format_timestamp(row.updated_at)}
                       </td>
-                      <td className="px-5 py-4">
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={saving || deleting_id === row.id}
-                            onClick={() => begin_edit(row)}
-                            aria-label={`Edit statistic for ${row.place}`}
-                          >
-                            <Pencil className="size-3" /> Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={saving || deleting_id === row.id}
-                            onClick={() => void delete_row(row)}
-                            aria-label={`Delete statistic for ${row.place}`}
-                          >
-                            {deleting_id === row.id ? (
-                              <Loader2 className="size-3 animate-spin" />
-                            ) : (
-                              <Trash2 className="size-3" />
-                            )}{" "}
-                            Delete
-                          </Button>
-                        </div>
-                      </td>
+                      {is_admin ? (
+                        <td className="px-5 py-4">
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={saving || deleting_id === row.id}
+                              onClick={() => begin_edit(row)}
+                              aria-label={`Edit statistic for ${row.place}`}
+                            >
+                              <Pencil className="size-3" /> Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={saving || deleting_id === row.id}
+                              onClick={() => void delete_row(row)}
+                              aria-label={`Delete statistic for ${row.place}`}
+                            >
+                              {deleting_id === row.id ? (
+                                <Loader2 className="size-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="size-3" />
+                              )}{" "}
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
