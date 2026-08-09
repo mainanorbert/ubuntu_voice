@@ -8,11 +8,17 @@ from types import SimpleNamespace
 
 import pytest
 import httpx
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 from starlette.datastructures import Headers
 
-from src.services.document_text import extract_document_text
-from src.services.ingestion import store_uploaded_document_file
+from src.services.document_text import (
+    MAX_EXTRACTED_PDF_TEXT_CHARS,
+    MAX_PDF_PAGE_COUNT,
+    DocumentTextLimitError,
+    _join_pdf_page_text,
+    extract_document_text,
+)
+from src.services.ingestion import assert_pdf_bytes, store_uploaded_document_file
 from src.services.supabase_storage import describe_supabase_http_error
 
 
@@ -50,6 +56,36 @@ def test_describe_supabase_http_error_points_connect_errors_at_endpoint_config()
 
     assert "SUPABASE_URL" in message
     assert "Name or service not known" not in message
+
+
+def test_pdf_signature_validation_rejects_renamed_non_pdf() -> None:
+    """A PDF extension and MIME type must not be enough to accept a file."""
+    with pytest.raises(HTTPException, match="does not appear to be a valid PDF"):
+        assert_pdf_bytes(b"not a PDF")
+
+
+def test_pdf_extraction_rejects_excessive_pages() -> None:
+    """Page limits prevent a large PDF from consuming an unbounded worker."""
+
+    class FakeReader:
+        pages = [object()] * (MAX_PDF_PAGE_COUNT + 1)
+
+    with pytest.raises(DocumentTextLimitError, match="page extraction limit"):
+        _join_pdf_page_text(FakeReader())
+
+
+def test_pdf_extraction_rejects_excessive_text() -> None:
+    """Text limits prevent a small but highly-compressible PDF from expanding indefinitely."""
+
+    class FakePage:
+        def extract_text(self) -> str:
+            return "x" * (MAX_EXTRACTED_PDF_TEXT_CHARS + 1)
+
+    class FakeReader:
+        pages = [FakePage()]
+
+    with pytest.raises(DocumentTextLimitError, match="extracted-text limit"):
+        _join_pdf_page_text(FakeReader())
 
 
 @pytest.mark.anyio

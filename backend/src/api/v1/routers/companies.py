@@ -19,7 +19,7 @@ from src.api.v1.schemas.ingestion import (
     DocumentUploadTicket,
     EmbedTriggerResponse,
 )
-from src.core.auth import UserIdentity, get_authenticated_user_identity, is_admin_email, require_auth_session
+from src.core.auth import UserIdentity, get_authenticated_user_identity, require_admin, require_auth_session
 from src.core.config import Settings
 from src.core.dependencies import get_db_session, get_settings
 from src.models import (
@@ -36,7 +36,10 @@ from src.models import (
 )
 from src.services.embedding_pipeline import run_embedding_pipeline_for_company
 from src.services.ingestion import (
+    PDF_MAGIC_BYTES,
+    MAX_DOCUMENT_UPLOAD_BATCH_COUNT,
     StoredDocumentFile,
+    assert_pdf_bytes,
     assert_pdf_metadata,
     assert_pdf_upload,
     build_storage_relative_path,
@@ -56,6 +59,7 @@ from src.services.ingestion import (
 from src.services.supabase_storage import (
     ExternalStorageError,
     create_supabase_signed_upload_url,
+    download_file_prefix_from_supabase,
     head_supabase_object,
     uses_supabase_storage,
 )
@@ -94,12 +98,6 @@ def build_document_response(document) -> DocumentResponse:
         is_embedded=document.is_embedded,
         created_at=document.created_at,
     )
-
-
-def require_admin(identity: UserIdentity, settings: Settings) -> None:
-    """Reject users whose email is not explicitly configured as an admin."""
-    if not is_admin_email(identity.email, settings.admin_emails):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator access is required.")
 
 
 @router.get("", response_model=list[CompanyResponse])
@@ -354,6 +352,12 @@ async def post_company_documents(
     user, _created = upsert_user(db_session, user_id=identity.user_id, email=identity.email)
     company = get_owned_company(db_session, company_id=company_id, owner_id=user.id)
 
+    if len(files) > MAX_DOCUMENT_UPLOAD_BATCH_COUNT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"You may upload at most {MAX_DOCUMENT_UPLOAD_BATCH_COUNT} documents at a time.",
+        )
+
     for upload_file in files:
         assert_pdf_upload(upload_file)
 
@@ -506,9 +510,9 @@ async def post_company_document_confirm(
 ) -> list[DocumentResponse]:
     """Persist DB rows for files the browser has just PUT to Supabase directly.
 
-    Verifies each object actually exists in the configured bucket (HEAD), reads
-    the authoritative size from the ``Content-Length`` header, then inserts the
-    metadata rows in a single transaction and triggers the embedding pipeline.
+    Verifies each object actually exists in the configured bucket, validates
+    its size and PDF signature, then inserts the metadata rows in a single
+    transaction and triggers the embedding pipeline.
     """
     if not uses_supabase_storage(settings):
         raise HTTPException(
@@ -541,6 +545,17 @@ async def post_company_document_confirm(
                         "The browser upload may have failed; please retry."
                     ),
                 )
+            assert_pdf_metadata(
+                file_name=item.file_name,
+                content_type=item.content_type,
+                file_size=object_size,
+            )
+            file_prefix = await download_file_prefix_from_supabase(
+                settings=settings,
+                file_path=item.file_path,
+                length=len(PDF_MAGIC_BYTES),
+            )
+            assert_pdf_bytes(file_prefix)
             stored_files.append(
                 (
                     item.document_id,

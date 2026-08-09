@@ -2,7 +2,8 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 ChatLanguage = Literal["English", "Swahili", "French", "Arabic", "Portuguese"]
 ChatHistoryRole = Literal["user", "assistant"]
@@ -24,7 +25,24 @@ class AgentChatRequest(BaseModel):
         description="Tenant company whose embedded documents are searched for context.",
         examples=["a1b2c3d4-0000-0000-0000-000000000000"],
     )
-    message: str = Field(..., min_length=1, examples=["What is the refund policy?"])
+    message: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="User message, limited to 2,000 characters.",
+        examples=["What is the refund policy?"],
+    )
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def validate_message_length(cls, value: str) -> str:
+        """Return a user-facing prompt-specific length error."""
+        if isinstance(value, str) and len(value) > 2000:
+            raise PydanticCustomError(
+                "prompt_too_long",
+                "Prompt should have at most 2000 characters",
+            )
+        return value
     language: ChatLanguage = Field(
         default="English",
         description="Primary language the assistant must use when answering.",

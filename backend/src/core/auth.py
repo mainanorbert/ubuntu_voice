@@ -42,6 +42,12 @@ def is_admin_email(email: str | None, admin_emails: str) -> bool:
     }
 
 
+def require_admin(identity: UserIdentity, settings: Settings) -> None:
+    """Reject authenticated users whose email is not configured as an administrator."""
+    if not is_admin_email(identity.email, settings.admin_emails):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator access is required.")
+
+
 def generate_user_id() -> str:
     """Return a local text user ID compatible with existing foreign keys."""
     return f"user_{secrets.token_urlsafe(18)}"

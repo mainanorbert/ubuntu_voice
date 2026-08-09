@@ -49,3 +49,9 @@ def test_agent_chat_request_rejects_too_much_history() -> None:
             message="Continue",
             history=[{"role": "user", "content": f"turn {index}"} for index in range(9)],
         )
+
+
+def test_agent_chat_request_rejects_oversized_message() -> None:
+    """The main prompt is bounded before it can reach model services."""
+    with pytest.raises(ValidationError, match="Prompt should have at most 2000 characters"):
+        AgentChatRequest(company_id="company_1", message="x" * 2001)

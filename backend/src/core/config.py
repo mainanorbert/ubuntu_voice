@@ -1,7 +1,11 @@
 """Application settings loaded from environment variables."""
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+DEFAULT_AUTH_SESSION_SECRET = "dev-auth-session-secret-change-me"
+MIN_AUTH_SESSION_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -92,6 +96,13 @@ class Settings(BaseSettings):
             "GPT-4 / GPT-3.5 / text-embedding-3-* models and is a safe default for OpenRouter."
         ),
     )
+    chat_rate_limit_requests_per_minute: int = Field(
+        default=10,
+        ge=1,
+        le=1000,
+        validation_alias=AliasChoices("CHAT_RATE_LIMIT_REQUESTS_PER_MINUTE"),
+        description="Maximum public chat requests per client IP in a rolling minute.",
+    )
     guardrail_phone_country_code: str = Field(
         default="254",
         description=(
@@ -171,7 +182,7 @@ class Settings(BaseSettings):
         ),
     )
     auth_session_secret: str = Field(
-        default="dev-auth-session-secret-change-me",
+        default=DEFAULT_AUTH_SESSION_SECRET,
         validation_alias=AliasChoices("AUTH_SESSION_SECRET"),
         description="Secret used to sign first-party auth session tokens. Override in production.",
     )
@@ -233,6 +244,21 @@ class Settings(BaseSettings):
             "Enable only if your frontend uses credentials mode for API calls."
         ),
     )
+
+    @model_validator(mode="after")
+    def validate_production_auth_session_secret(self) -> "Settings":
+        """Prevent a publicly known or weak signing key from reaching production."""
+        if self.environment.strip().lower() != "production":
+            return self
+        if self.auth_session_secret == DEFAULT_AUTH_SESSION_SECRET:
+            raise ValueError(
+                "AUTH_SESSION_SECRET must be explicitly changed before starting in production."
+            )
+        if len(self.auth_session_secret) < MIN_AUTH_SESSION_SECRET_LENGTH:
+            raise ValueError(
+                f"AUTH_SESSION_SECRET must be at least {MIN_AUTH_SESSION_SECRET_LENGTH} characters in production."
+            )
+        return self
 
     @field_validator("database_url", mode="before")
     @classmethod

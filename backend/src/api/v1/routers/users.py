@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 
 from src.api.v1.schemas.ingestion import RegisteredUserResponse
 from src.api.v1.schemas.usage import UserSpendResponse
-from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
-from src.core.dependencies import get_db_session
+from src.core.auth import UserIdentity, get_authenticated_user_identity, require_admin, require_auth_session
+from src.core.config import Settings
+from src.core.dependencies import get_db_session, get_settings
 from src.services.cost_monitoring import ensure_user_spend_row, list_user_spend_rows
 from src.services.ingestion import upsert_user
 
@@ -51,10 +52,12 @@ async def post_user_register(
 @router.get("/costs", response_model=list[UserSpendResponse])
 async def get_user_costs(
     session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> list[UserSpendResponse]:
-    """Return the current cumulative spend totals for all tracked users."""
+    """Return cumulative spend totals to configured administrators only."""
     identity = get_authenticated_user_identity(session_state)
+    require_admin(identity, settings)
     user, _created = upsert_user(db_session, user_id=identity.user_id, email=identity.email)
     ensure_user_spend_row(db_session, user_id=user.id, email=user.email)
     db_session.commit()

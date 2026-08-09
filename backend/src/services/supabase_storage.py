@@ -145,6 +145,29 @@ async def create_supabase_signed_upload_url(
     return f"{settings.supabase_url}/storage/v1{relative}"
 
 
+async def download_file_prefix_from_supabase(
+    *, settings: Settings, file_path: str, length: int
+) -> bytes:
+    """Read a small prefix of an object for server-side content validation."""
+    if length <= 0:
+        raise ValueError("length must be positive")
+    url = build_storage_object_url(settings=settings, file_path=file_path)
+    headers = build_storage_headers(settings=settings)
+    headers["Range"] = f"bytes=0-{length - 1}"
+    try:
+        async with httpx.AsyncClient(timeout=_SUPABASE_TIMEOUT) as client:
+            response = await client.get(url, headers=headers)
+    except httpx.HTTPError as exc:
+        raise ExternalStorageError(describe_supabase_http_error(operation="validation download", exc=exc)) from exc
+    if response.status_code == 404:
+        raise FileNotFoundError(f"Supabase object not found for file_path={file_path!r}")
+    if response.status_code not in {200, 206}:
+        raise ExternalStorageError(
+            f"Supabase validation download failed with status {response.status_code}: {response.text[:300]}"
+        )
+    return response.content[:length]
+
+
 async def head_supabase_object(*, settings: Settings, file_path: str) -> int | None:
     """Return the byte length of a stored object, or ``None`` if it does not exist."""
     url = build_storage_object_url(settings=settings, file_path=file_path)

@@ -197,7 +197,7 @@ export default function DashboardPage() {
               icon={Home}
               active
             />
-            <DashboardLink href="/usage" label="Usage" icon={Gauge} />
+            {user?.is_admin ? <DashboardLink href="/usage" label="Usage" icon={Gauge} /> : null}
             <DashboardLink
               href="/guardrails"
               label="Guardrails"

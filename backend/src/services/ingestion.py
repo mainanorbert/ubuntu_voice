@@ -18,6 +18,8 @@ DOCUMENT_STATUS_FAILED = "failed"
 # Hard ceiling for any single PDF, applied both to multipart and signed-URL flows.
 # Tuned for a free-tier deployment talking to Supabase Storage from a browser.
 MAX_PDF_UPLOAD_BYTES = 25 * 1024 * 1024
+MAX_DOCUMENT_UPLOAD_BATCH_COUNT = 20
+PDF_MAGIC_BYTES = b"%PDF-"
 
 
 @dataclass(frozen=True)
@@ -225,6 +227,20 @@ def assert_pdf_upload(upload_file: UploadFile) -> None:
         )
 
 
+def assert_pdf_bytes(file_bytes: bytes | bytearray) -> None:
+    """Reject content that does not start with the standard PDF file signature.
+
+    File names and MIME types are supplied by the browser and therefore only
+    provide an early usability check. The bytes are validated immediately
+    before they are persisted to protect the multipart ingestion path.
+    """
+    if not file_bytes.startswith(PDF_MAGIC_BYTES):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="The uploaded file does not appear to be a valid PDF.",
+        )
+
+
 def assert_pdf_metadata(*, file_name: str, content_type: str, file_size: int) -> None:
     """Validate metadata sent by the client when minting signed upload URLs.
 
@@ -293,6 +309,7 @@ async def store_uploaded_document_file(
 
     if file_size == 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+    assert_pdf_bytes(file_bytes)
 
     if uses_supabase_storage(settings):
         await upload_file_bytes_to_supabase(
