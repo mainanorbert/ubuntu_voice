@@ -9,6 +9,7 @@ import {
   Home,
   Loader2,
   Map as MapIcon,
+  MapPin,
   ShieldAlert,
 } from "lucide-react"
 import { AppNavbar } from "@/components/app-navbar"
@@ -197,7 +198,9 @@ export default function DashboardPage() {
               icon={Home}
               active
             />
-            {user?.is_admin ? <DashboardLink href="/usage" label="Usage" icon={Gauge} /> : null}
+            {user?.is_admin ? (
+              <DashboardLink href="/usage" label="Usage" icon={Gauge} />
+            ) : null}
             <DashboardLink
               href="/guardrails"
               label="Guardrails"
@@ -213,6 +216,7 @@ export default function DashboardPage() {
               label="Statistics"
               icon={BarChart3}
             />
+            <DashboardLink href="/places" label="Known Places" icon={MapPin} />
             {user?.is_admin ? (
               <DashboardLink
                 href="/admin"

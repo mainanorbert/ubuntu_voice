@@ -1,25 +1,399 @@
 "use client"
+
 import { FormEvent, useEffect, useMemo, useState } from "react"
 import { Pencil, Plus, Trash2 } from "lucide-react"
+
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
 
-type Place = { id: number; name: string; country: string | null; latitude: number; longitude: number; is_active: boolean }
+type Place = {
+  id: number
+  name: string
+  country: string | null
+  latitude: number
+  longitude: number
+  is_active: boolean
+}
+
+type AuthProfile = { is_admin?: unknown }
+
 const empty = { name: "", country: "", latitude: "", longitude: "" }
 const page_size = 10
-function error_text(data: unknown) { if (data && typeof data === "object" && "detail" in data) return String((data as { detail: unknown }).detail); return "Unable to complete that request." }
-function notify_known_places_updated() { window.dispatchEvent(new Event("known-places-updated")); if (typeof BroadcastChannel !== "undefined") { const channel = new BroadcastChannel("known-places-updated"); channel.postMessage(null); window.setTimeout(() => channel.close(), 0) } }
+
+function error_text(data: unknown) {
+  if (data && typeof data === "object" && "detail" in data) {
+    return String((data as { detail: unknown }).detail)
+  }
+  return "Unable to complete that request."
+}
+
+function notify_known_places_updated() {
+  window.dispatchEvent(new Event("known-places-updated"))
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel("known-places-updated")
+    channel.postMessage(null)
+    window.setTimeout(() => channel.close(), 0)
+  }
+}
 
 export default function PlacesPage() {
-  const [places, set_places] = useState<Place[]>([]); const [form, set_form] = useState(empty); const [editing, set_editing] = useState<number | null>(null); const [error, set_error] = useState(""); const [search, set_search] = useState(""); const [country, set_country] = useState(""); const [page, set_page] = useState(1)
-  async function load() { const r = await fetch("/api/monitoring/known-places?include_inactive=true"); if (r.ok) set_places(await r.json()) }
-  useEffect(() => { void fetch("/api/monitoring/known-places?include_inactive=true").then(async (response) => { if (response.ok) set_places(await response.json()) }) }, [])
-  const countries = useMemo(() => Array.from(new Set(places.flatMap((place) => place.country ? [place.country] : []))).sort((a, b) => a.localeCompare(b)), [places])
-  const filtered_places = useMemo(() => places.filter((place) => place.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()) && (!country || place.country === country)), [places, search, country])
+  const [places, set_places] = useState<Place[]>([])
+  const [is_admin, set_is_admin] = useState(false)
+  const [form, set_form] = useState(empty)
+  const [editing, set_editing] = useState<number | null>(null)
+  const [is_manager_open, set_is_manager_open] = useState(false)
+  const [error, set_error] = useState("")
+  const [search, set_search] = useState("")
+  const [country, set_country] = useState("")
+  const [page, set_page] = useState(1)
+
+  async function load() {
+    const response = await fetch(
+      "/api/monitoring/known-places?include_inactive=true"
+    )
+    if (response.ok) set_places(await response.json())
+  }
+
+  useEffect(() => {
+    void fetch("/api/monitoring/known-places?include_inactive=true")
+      .then(async (response) => {
+        if (response.ok) set_places(await response.json())
+      })
+      .catch(() =>
+        set_error("Known places could not be loaded. Please try again.")
+      )
+  }, [])
+
+  useEffect(() => {
+    void fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return
+        const profile: AuthProfile = await response.json()
+        set_is_admin(profile.is_admin === true)
+      })
+      .catch(() => set_is_admin(false))
+  }, [])
+
+  const countries = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          places.flatMap((place) => (place.country ? [place.country] : []))
+        )
+      ).sort((left, right) => left.localeCompare(right)),
+    [places]
+  )
+  const filtered_places = useMemo(
+    () =>
+      places.filter(
+        (place) =>
+          place.name
+            .toLocaleLowerCase()
+            .includes(search.trim().toLocaleLowerCase()) &&
+          (!country || place.country === country)
+      ),
+    [places, search, country]
+  )
   const page_count = Math.max(1, Math.ceil(filtered_places.length / page_size))
   const current_page = Math.min(page, page_count)
-  const visible_places = filtered_places.slice((current_page - 1) * page_size, current_page * page_size)
-  async function submit(event: FormEvent) { event.preventDefault(); set_error(""); const url = editing ? `/api/monitoring/known-places/${editing}` : "/api/monitoring/known-places"; const r = await fetch(url, { method: editing ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: form.name, country: form.country || null, latitude: Number(form.latitude), longitude: Number(form.longitude) }) }); if (!r.ok) { set_error(error_text(await r.json())); return }; set_form(empty); set_editing(null); notify_known_places_updated(); void load() }
-  async function remove(id: number) { if (!window.confirm("Remove this place from active place lists?")) return; const r = await fetch(`/api/monitoring/known-places/${id}`, { method: "DELETE" }); if (!r.ok) set_error(error_text(await r.json())); else { notify_known_places_updated(); void load() } }
-  return <DashboardShell title="Known places" description="Manage the places available to incident workflows."><div className="grid gap-6 lg:grid-cols-[360px_1fr]"><form onSubmit={submit} className="h-fit rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm"><h2 className="font-semibold">{editing ? "Edit place" : "Add place"}</h2>{["name", "country", "latitude", "longitude"].map((field) => <label key={field} className="mt-4 block text-sm font-medium capitalize">{field} {field !== "country" && <span className="text-[#DC2626]">*</span>}<input required={field !== "country"} value={form[field as keyof typeof form]} type={field === "name" || field === "country" ? "text" : "number"} step={field === "latitude" || field === "longitude" ? "0.000001" : undefined} min={field === "latitude" ? -90 : field === "longitude" ? -180 : undefined} max={field === "latitude" ? 90 : field === "longitude" ? 180 : undefined} onChange={(e) => set_form({ ...form, [field]: e.target.value })} className="mt-1 w-full rounded-lg border border-[#b9cdeb] px-3 py-2 outline-none focus:ring-2 focus:ring-[#60A5FA]" /> </label>)}{error && <p className="mt-3 text-sm text-[#DC2626]">{error}</p>}<div className="mt-5 flex gap-2"><Button type="submit"><Plus className="size-4" />{editing ? "Save changes" : "Add place"}</Button>{editing && <Button type="button" variant="outline" onClick={() => { set_editing(null); set_form(empty) }}>Cancel</Button>}</div></form><section className="overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm"><div className="border-b border-[#dce4ef] px-5 py-4"><h2 className="font-semibold">Places</h2><div className="mt-4 grid gap-3 sm:grid-cols-2"><input value={search} onChange={(event) => { set_search(event.target.value); set_page(1) }} placeholder="Search by name" aria-label="Search places by name" className="rounded-lg border border-[#b9cdeb] px-3 py-2 outline-none focus:ring-2 focus:ring-[#60A5FA]" /><select value={country} onChange={(event) => { set_country(event.target.value); set_page(1) }} aria-label="Filter places by country" className="rounded-lg border border-[#b9cdeb] bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-[#60A5FA]"><option value="">All countries</option>{countries.map((item) => <option key={item} value={item}>{item}</option>)}</select></div></div><div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-[#eef5ff] text-[#607694]"><tr><th className="px-5 py-3">Name</th><th className="px-5 py-3">Country</th><th className="px-5 py-3">Latitude</th><th className="px-5 py-3">Longitude</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Actions</th></tr></thead><tbody>{visible_places.map((p) => <tr key={p.id} className="border-t border-[#edf1f6]"><td className="px-5 py-4 font-medium">{p.name}</td><td className="px-5 py-4">{p.country ?? "—"}</td><td className="px-5 py-4">{p.latitude}</td><td className="px-5 py-4">{p.longitude}</td><td className="px-5 py-4">{p.is_active ? "Active" : "Inactive"}</td><td className="px-5 py-4"><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => { set_editing(p.id); set_form({ name: p.name, country: p.country ?? "", latitude: String(p.latitude), longitude: String(p.longitude) }) }}><Pencil className="size-3" />Edit</Button>{p.is_active && <Button size="sm" variant="destructive" onClick={() => void remove(p.id)}><Trash2 className="size-3" />Delete</Button>}</div></td></tr>)}{visible_places.length === 0 && <tr><td colSpan={6} className="px-5 py-8 text-center text-[#607694]">No places match your filters.</td></tr>}</tbody></table></div><div className="flex flex-col gap-3 border-t border-[#dce4ef] px-5 py-4 text-sm text-[#607694] sm:flex-row sm:items-center sm:justify-between"><span>{filtered_places.length === 0 ? "0 places" : `${(current_page - 1) * page_size + 1}–${Math.min(current_page * page_size, filtered_places.length)} of ${filtered_places.length} places`}</span><div className="flex gap-2"><Button size="sm" variant="outline" disabled={current_page === 1} onClick={() => set_page((current) => Math.max(1, current - 1))}>Previous</Button><span className="self-center">Page {current_page} of {page_count}</span><Button size="sm" variant="outline" disabled={current_page === page_count} onClick={() => set_page((current) => Math.min(page_count, current + 1))}>Next</Button></div></div></section></div></DashboardShell>
+  const visible_places = filtered_places.slice(
+    (current_page - 1) * page_size,
+    current_page * page_size
+  )
+
+  function close_manager() {
+    set_is_manager_open(false)
+    set_editing(null)
+    set_form(empty)
+    set_error("")
+  }
+
+  function edit_place(place: Place) {
+    set_editing(place.id)
+    set_form({
+      name: place.name,
+      country: place.country ?? "",
+      latitude: String(place.latitude),
+      longitude: String(place.longitude),
+    })
+    set_error("")
+    set_is_manager_open(true)
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    set_error("")
+    const response = await fetch(
+      editing
+        ? `/api/monitoring/known-places/${editing}`
+        : "/api/monitoring/known-places",
+      {
+        method: editing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          country: form.country || null,
+          latitude: Number(form.latitude),
+          longitude: Number(form.longitude),
+        }),
+      }
+    )
+    if (!response.ok) {
+      set_error(error_text(await response.json()))
+      return
+    }
+    notify_known_places_updated()
+    close_manager()
+    void load()
+  }
+
+  async function remove(id: number) {
+    if (!window.confirm("Remove this place from active place lists?")) return
+    const response = await fetch(`/api/monitoring/known-places/${id}`, {
+      method: "DELETE",
+    })
+    if (!response.ok) {
+      set_error(error_text(await response.json()))
+      return
+    }
+    notify_known_places_updated()
+    void load()
+  }
+
+  return (
+    <DashboardShell
+      title="Known places"
+      description="Browse the places available to incident workflows."
+    >
+      <div className="flex flex-col gap-6">
+        {is_admin ? (
+          <div>
+            <Button
+              type="button"
+              onClick={() => {
+                if (is_manager_open) close_manager()
+                else set_is_manager_open(true)
+              }}
+              aria-expanded={is_manager_open}
+              aria-controls="place-manager"
+              className="bg-[#2563EB] text-white hover:bg-[#1E3A8A] focus-visible:ring-[#60A5FA]"
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              Manage places
+            </Button>
+          </div>
+        ) : null}
+
+        {is_admin && is_manager_open ? (
+          <form
+            id="place-manager"
+            onSubmit={submit}
+            className="rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="font-semibold text-[#061b3b]">
+                {editing ? "Edit place" : "Add place"}
+              </h2>
+              <Button type="button" variant="outline" onClick={close_manager}>
+                Cancel
+              </Button>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {(["name", "country", "latitude", "longitude"] as const).map(
+                (field) => (
+                  <label
+                    key={field}
+                    className="block text-sm font-medium capitalize"
+                  >
+                    {field}{" "}
+                    {field !== "country" ? (
+                      <span className="text-[#DC2626]">*</span>
+                    ) : null}
+                    <input
+                      required={field !== "country"}
+                      value={form[field]}
+                      type={
+                        field === "name" || field === "country"
+                          ? "text"
+                          : "number"
+                      }
+                      step={
+                        field === "latitude" || field === "longitude"
+                          ? "0.000001"
+                          : undefined
+                      }
+                      min={
+                        field === "latitude"
+                          ? -90
+                          : field === "longitude"
+                            ? -180
+                            : undefined
+                      }
+                      max={
+                        field === "latitude"
+                          ? 90
+                          : field === "longitude"
+                            ? 180
+                            : undefined
+                      }
+                      onChange={(event) =>
+                        set_form({ ...form, [field]: event.target.value })
+                      }
+                      className="mt-1 w-full rounded-lg border border-[#b9cdeb] px-3 py-2 outline-none focus:ring-2 focus:ring-[#60A5FA]"
+                    />
+                  </label>
+                )
+              )}
+            </div>
+            {error ? (
+              <p role="alert" className="mt-3 text-sm text-[#DC2626]">
+                {error}
+              </p>
+            ) : null}
+            <Button
+              type="submit"
+              className="mt-5 bg-[#2563EB] text-white hover:bg-[#1E3A8A]"
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              {editing ? "Save changes" : "Add place"}
+            </Button>
+          </form>
+        ) : null}
+
+        {error && !is_manager_open ? (
+          <p
+            role="alert"
+            className="rounded-lg bg-red-50 p-3 text-sm text-[#DC2626]"
+          >
+            {error}
+          </p>
+        ) : null}
+
+        <section className="overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm">
+          <div className="border-b border-[#dce4ef] px-5 py-4">
+            <h2 className="font-semibold text-[#061b3b]">Places</h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <input
+                value={search}
+                onChange={(event) => {
+                  set_search(event.target.value)
+                  set_page(1)
+                }}
+                placeholder="Search by name"
+                aria-label="Search places by name"
+                className="rounded-lg border border-[#b9cdeb] px-3 py-2 outline-none focus:ring-2 focus:ring-[#60A5FA]"
+              />
+              <select
+                value={country}
+                onChange={(event) => {
+                  set_country(event.target.value)
+                  set_page(1)
+                }}
+                aria-label="Filter places by country"
+                className="rounded-lg border border-[#b9cdeb] bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-[#60A5FA]"
+              >
+                <option value="">All countries</option>
+                {countries.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="bg-[#eef5ff] text-[#607694]">
+                <tr>
+                  <th className="px-5 py-3">Name</th>
+                  <th className="px-5 py-3">Country</th>
+                  <th className="px-5 py-3">Latitude</th>
+                  <th className="px-5 py-3">Longitude</th>
+                  <th className="px-5 py-3">Status</th>
+                  {is_admin ? <th className="px-5 py-3">Actions</th> : null}
+                </tr>
+              </thead>
+              <tbody>
+                {visible_places.map((place) => (
+                  <tr key={place.id} className="border-t border-[#edf1f6]">
+                    <td className="px-5 py-4 font-medium">{place.name}</td>
+                    <td className="px-5 py-4">{place.country ?? "—"}</td>
+                    <td className="px-5 py-4">{place.latitude}</td>
+                    <td className="px-5 py-4">{place.longitude}</td>
+                    <td className="px-5 py-4">
+                      {place.is_active ? "Active" : "Inactive"}
+                    </td>
+                    {is_admin ? (
+                      <td className="px-5 py-4">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => edit_place(place)}
+                          >
+                            <Pencil className="size-3" aria-hidden="true" />
+                            Edit
+                          </Button>
+                          {place.is_active ? (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => void remove(place.id)}
+                            >
+                              <Trash2 className="size-3" aria-hidden="true" />
+                              Delete
+                            </Button>
+                          ) : null}
+                        </div>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+                {visible_places.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={is_admin ? 6 : 5}
+                      className="px-5 py-8 text-center text-[#607694]"
+                    >
+                      No places match your filters.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-col gap-3 border-t border-[#dce4ef] px-5 py-4 text-sm text-[#607694] sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              {filtered_places.length === 0
+                ? "0 places"
+                : `${(current_page - 1) * page_size + 1}–${Math.min(current_page * page_size, filtered_places.length)} of ${filtered_places.length} places`}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={current_page === 1}
+                onClick={() => set_page((current) => Math.max(1, current - 1))}
+              >
+                Previous
+              </Button>
+              <span className="self-center">
+                Page {current_page} of {page_count}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={current_page === page_count}
+                onClick={() =>
+                  set_page((current) => Math.min(page_count, current + 1))
+                }
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </DashboardShell>
+  )
 }

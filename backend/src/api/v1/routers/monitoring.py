@@ -7,8 +7,9 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from src.api.v1.schemas.monitoring import GuardrailEventResponse, IncidentStatisticResponse, IncidentStatisticUpdate, IncidentStatisticsAgent, IncidentStatisticsPageResponse, IncidentStatisticsSummary, KnownPlaceInput, KnownPlaceResponse
-from src.core.auth import UserIdentity, get_authenticated_user_identity, require_auth_session
-from src.core.dependencies import get_db_session
+from src.core.auth import UserIdentity, get_authenticated_user_identity, require_admin, require_auth_session
+from src.core.config import Settings
+from src.core.dependencies import get_db_session, get_settings
 from src.models import Company, GuardrailEvent, IncidentStatistic, KnownPlace
 from src.services.incident_statistics import normalize_incident_place, sanitize_incident_description
 from src.services.ingestion import upsert_user
@@ -33,7 +34,14 @@ async def list_known_places(
 
 
 @router.post("/known-places", response_model=KnownPlaceResponse, status_code=201)
-async def create_known_place(payload: KnownPlaceInput, _session_state: Annotated[UserIdentity, Depends(require_auth_session)], db_session: Annotated[Session, Depends(get_db_session)]) -> KnownPlaceResponse:
+async def create_known_place(
+    payload: KnownPlaceInput,
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> KnownPlaceResponse:
+    """Create a known place for configured administrators only."""
+    require_admin(get_authenticated_user_identity(session_state), settings)
     place = KnownPlace(
         name=payload.name.strip(),
         country=payload.country.strip() if payload.country and payload.country.strip() else None,
@@ -51,7 +59,15 @@ async def create_known_place(payload: KnownPlaceInput, _session_state: Annotated
 
 
 @router.put("/known-places/{place_id}", response_model=KnownPlaceResponse)
-async def update_known_place(place_id: int, payload: KnownPlaceInput, _session_state: Annotated[UserIdentity, Depends(require_auth_session)], db_session: Annotated[Session, Depends(get_db_session)]) -> KnownPlaceResponse:
+async def update_known_place(
+    place_id: int,
+    payload: KnownPlaceInput,
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> KnownPlaceResponse:
+    """Update a known place for configured administrators only."""
+    require_admin(get_authenticated_user_identity(session_state), settings)
     place = db_session.get(KnownPlace, place_id)
     if place is None:
         raise HTTPException(status_code=404, detail="Place not found.")
@@ -70,7 +86,14 @@ async def update_known_place(place_id: int, payload: KnownPlaceInput, _session_s
 
 
 @router.delete("/known-places/{place_id}", status_code=204)
-async def delete_known_place(place_id: int, _session_state: Annotated[UserIdentity, Depends(require_auth_session)], db_session: Annotated[Session, Depends(get_db_session)]) -> None:
+async def delete_known_place(
+    place_id: int,
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> None:
+    """Deactivate a known place for configured administrators only."""
+    require_admin(get_authenticated_user_identity(session_state), settings)
     place = db_session.get(KnownPlace, place_id)
     if place is None:
         raise HTTPException(status_code=404, detail="Place not found.")
@@ -118,9 +141,11 @@ async def update_incident_statistic(
     statistic_id: str,
     payload: IncidentStatisticUpdate,
     _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> IncidentStatisticResponse:
-    """Allow any signed-in user to correct an aggregated incident row."""
+    """Allow configured administrators to correct an aggregated incident row."""
+    require_admin(get_authenticated_user_identity(_session_state), settings)
     row = db_session.get(IncidentStatistic, statistic_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Statistic not found.")
@@ -164,9 +189,11 @@ async def update_incident_statistic(
 async def delete_incident_statistic(
     statistic_id: str,
     _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> None:
-    """Allow any signed-in user to remove an incorrect incident statistic."""
+    """Allow configured administrators to remove an incorrect incident statistic."""
+    require_admin(get_authenticated_user_identity(_session_state), settings)
     row = db_session.get(IncidentStatistic, statistic_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Statistic not found.")

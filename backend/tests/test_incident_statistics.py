@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.core.database import Base, create_database_engine, create_session_factory
-from src.models import Company, IncidentStatistic, User
+from src.models import Company, IncidentStatistic, KnownPlace, User
 from src.services.incident_statistics import (
     IncidentClassifierOutput,
     IncidentStatisticRecord,
@@ -192,9 +192,10 @@ def test_sanitize_incident_description_removes_contact_details() -> None:
 
 
 def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agent(tmp_path, monkeypatch) -> None:
-    """Signed-in users can view all statistics or select one reporting agent."""
+    """Signed-in users can view data, while only ADMIN_EMAILS can mutate it."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
     monkeypatch.setenv("EIVEN_SERVICE_URL", f"sqlite:///{tmp_path / 'incident_stats.db'}")
+    monkeypatch.setenv("ADMIN_EMAILS", "owner@example.org")
 
     from src.core.dependencies import clear_database_caches, get_database_engine, get_settings
 
@@ -203,8 +204,10 @@ def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agen
     from src.core.auth import UserIdentity, require_auth_session
     from src.main import app
 
+    current_identity = UserIdentity(user_id="owner_1", email="owner@example.org")
+
     async def fake_require_auth_session():
-        return UserIdentity(user_id="owner_1", email="owner@example.org")
+        return current_identity
 
     app.dependency_overrides[require_auth_session] = fake_require_auth_session
 
@@ -253,6 +256,14 @@ def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agen
                     total_count=8,
                 )
             )
+            session.add(
+                KnownPlace(
+                    name="Goma",
+                    country="Democratic Republic of the Congo",
+                    latitude=-1.6792,
+                    longitude=29.2228,
+                )
+            )
             session.commit()
 
         with TestClient(app) as client:
@@ -299,6 +310,31 @@ def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agen
             missing = client.delete("/api/v1/monitoring/incident-statistics/stat_2")
 
         assert missing.status_code == 404
+
+        current_identity = UserIdentity(user_id="owner_2", email="other@example.org")
+        place_payload = {
+            "name": "Bukavu",
+            "country": "Democratic Republic of the Congo",
+            "latitude": -2.5083,
+            "longitude": 28.8608,
+        }
+        with TestClient(app) as client:
+            # Read access, including filtering, remains available to every signed-in user.
+            assert client.get("/api/v1/monitoring/known-places?include_inactive=true").status_code == 200
+            assert client.get("/api/v1/monitoring/incident-statistics?agent_id=company_1").status_code == 200
+            assert client.post("/api/v1/monitoring/known-places", json=place_payload).status_code == 403
+            assert client.put("/api/v1/monitoring/known-places/1", json=place_payload).status_code == 403
+            assert client.delete("/api/v1/monitoring/known-places/1").status_code == 403
+            assert client.put(
+                "/api/v1/monitoring/incident-statistics/stat_1",
+                json={
+                    "place": "Goma",
+                    "description": "Corrected report of casualties near Goma.",
+                    "type": "Casualties",
+                    "total_count": 4,
+                },
+            ).status_code == 403
+            assert client.delete("/api/v1/monitoring/incident-statistics/stat_1").status_code == 403
     finally:
         app.dependency_overrides.clear()
         clear_database_caches()
