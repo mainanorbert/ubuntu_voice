@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils"
 
 const dashboard_links = [
   { href: "/dashboard", label: "Overview", icon: Home },
-  { href: "/guardrails", label: "Guardrails", icon: ShieldAlert },
   { href: "/statistics", label: "Statistics", icon: Table2 },
   { href: "/places", label: "Known Places", icon: MapPin },
   { href: "/evaluations", label: "Evaluations", icon: BarChart3 },
@@ -53,6 +52,7 @@ export function DashboardShell({
   const visible_links = is_admin
     ? [
         ...dashboard_links,
+        { href: "/guardrails", label: "Guardrails", icon: ShieldAlert },
         { href: "/usage", label: "Usage", icon: Gauge },
         { href: "/admin", label: "Agent approvals", icon: ShieldAlert },
       ]

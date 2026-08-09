@@ -14,10 +14,11 @@ const protected_prefixes = [
   "/evaluations",
   "/statistics",
 ]
+const admin_only_prefixes = ["/usage", "/guardrails"]
 
 /**
  * Redirects unauthenticated page requests to the manual/Google login page and
- * prevents non-admins from opening the usage dashboard.
+ * prevents non-admins from opening administrator-only dashboards.
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const is_protected = protected_prefixes.some(
@@ -27,7 +28,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   const has_session = Boolean(request.cookies.get(AUTH_COOKIE_NAME)?.value)
   if (has_session) {
-    if (request.nextUrl.pathname !== "/usage") return NextResponse.next()
+    const is_admin_only = admin_only_prefixes.some(
+      (prefix) => request.nextUrl.pathname === prefix || request.nextUrl.pathname.startsWith(`${prefix}/`),
+    )
+    if (!is_admin_only) return NextResponse.next()
 
     const session_token = request.cookies.get(AUTH_COOKIE_NAME)?.value
     try {
