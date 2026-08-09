@@ -55,3 +55,22 @@ def test_agent_chat_request_rejects_oversized_message() -> None:
     """The main prompt is bounded before it can reach model services."""
     with pytest.raises(ValidationError, match="Prompt should have at most 2000 characters"):
         AgentChatRequest(company_id="company_1", message="x" * 2001)
+
+
+@pytest.mark.parametrize("field", ["message", "history"])
+def test_agent_chat_request_rejects_unsafe_control_characters(field: str) -> None:
+    """NUL and other unsafe controls do not reach prompts, logs, or services."""
+    payload = {"company_id": "company_1", "message": "Hello"}
+    if field == "message":
+        payload["message"] = "Hello\x00"
+    else:
+        payload["history"] = [{"role": "user", "content": "Earlier\x1f message"}]
+
+    with pytest.raises(ValidationError, match="control characters"):
+        AgentChatRequest(**payload)
+
+
+def test_agent_chat_request_allows_chat_formatting_characters() -> None:
+    """Tabs and newlines are intentional formatting in chat text."""
+    request = AgentChatRequest(company_id="company_1", message="First line\n\tSecond line")
+    assert request.message == "First line\n\tSecond line"

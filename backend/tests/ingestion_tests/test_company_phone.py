@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.api.v1.schemas.ingestion import CompanyCreateRequest
+from src.api.v1.schemas.ingestion import COMPANY_NAME_MAX_LENGTH, CompanyCreateRequest, CompanyUpdateRequest
 
 
 def test_company_create_request_normalizes_phone() -> None:
@@ -53,3 +53,25 @@ def test_company_create_request_rejects_invalid_phone() -> None:
             email="support@example.org",
             phone="123",
         )
+
+
+@pytest.mark.parametrize("request_class", [CompanyCreateRequest, CompanyUpdateRequest])
+def test_company_name_rejects_control_characters(request_class) -> None:
+    """Agent names are safe to store, render, and include in logs."""
+    kwargs = {"name": "Sahel\x00 Agent"}
+    if request_class is CompanyCreateRequest:
+        kwargs["email"] = "support@example.org"
+
+    with pytest.raises(ValidationError, match="control characters"):
+        request_class(**kwargs)
+
+
+@pytest.mark.parametrize("request_class", [CompanyCreateRequest, CompanyUpdateRequest])
+def test_company_name_has_a_bounded_length(request_class) -> None:
+    """Agent names remain well below PostgreSQL's unique-index size limit."""
+    kwargs = {"name": "x" * (COMPANY_NAME_MAX_LENGTH + 1)}
+    if request_class is CompanyCreateRequest:
+        kwargs["email"] = "support@example.org"
+
+    with pytest.raises(ValidationError):
+        request_class(**kwargs)

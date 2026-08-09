@@ -5,6 +5,8 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 
+from src.api.v1.schemas.text_validation import reject_control_characters
+
 ChatLanguage = Literal["English", "Swahili", "French", "Arabic", "Portuguese"]
 ChatHistoryRole = Literal["user", "assistant"]
 
@@ -14,6 +16,12 @@ class ChatHistoryMessage(BaseModel):
 
     role: ChatHistoryRole = Field(..., description="Speaker for the previous chat turn.")
     content: str = Field(..., min_length=1, max_length=1200, description="Previous message text.")
+
+    @field_validator("content")
+    @classmethod
+    def validate_content_characters(cls, value: str) -> str:
+        """Keep chat history safe for prompt construction and logging."""
+        return reject_control_characters(value, allow_formatting=True)
 
 
 class AgentChatRequest(BaseModel):
@@ -43,6 +51,12 @@ class AgentChatRequest(BaseModel):
                 "Prompt should have at most 2000 characters",
             )
         return value
+
+    @field_validator("message")
+    @classmethod
+    def validate_message_characters(cls, value: str) -> str:
+        """Allow readable chat formatting but reject unsafe control characters."""
+        return reject_control_characters(value, allow_formatting=True)
     language: ChatLanguage = Field(
         default="English",
         description="Primary language the assistant must use when answering.",
