@@ -10,9 +10,16 @@ from pypdf import PdfReader
 from src.core.config import Settings
 from src.services.supabase_storage import download_file_bytes_from_supabase, uses_supabase_storage
 
+MAX_PDF_PAGE_COUNT = 500
+MAX_EXTRACTED_PDF_TEXT_CHARS = 1_000_000
+
 
 class UnsupportedDocumentFormatError(ValueError):
     """Raised when a file type is not supported for text extraction."""
+
+
+class DocumentTextLimitError(ValueError):
+    """Raised when a PDF exceeds the safe extraction limits."""
 
 
 def resolve_stored_document_path(*, upload_root: str, file_path: str) -> Path:
@@ -69,10 +76,23 @@ def _extract_pdf_bytes(file_bytes: bytes) -> str:
 
 
 def _join_pdf_page_text(reader: PdfReader) -> str:
-    """Join extracted text from all non-empty pages in a PDF reader."""
+    """Join text from a bounded number of pages without retaining excessive content."""
+    if len(reader.pages) > MAX_PDF_PAGE_COUNT:
+        raise DocumentTextLimitError(
+            f"PDF exceeds the {MAX_PDF_PAGE_COUNT}-page extraction limit."
+        )
+
     parts: list[str] = []
+    extracted_characters = 0
     for page in reader.pages:
         extracted = page.extract_text() or ""
-        if extracted.strip():
-            parts.append(extracted)
+        cleaned = extracted.strip()
+        if not cleaned:
+            continue
+        extracted_characters += len(cleaned)
+        if extracted_characters > MAX_EXTRACTED_PDF_TEXT_CHARS:
+            raise DocumentTextLimitError(
+                "PDF exceeds the extracted-text limit and cannot be processed safely."
+            )
+        parts.append(extracted)
     return "\n\n".join(parts).strip()
