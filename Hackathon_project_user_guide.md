@@ -13,7 +13,7 @@ The system supports:
 - A statistics table and map for monitoring reported locations and incident statuses.
 - Optional email, SMS, and push notifications for urgent conflict alerts.
 - Note: SMS, and push notifications for urgent conflict alerts not configured for now
-- Signed-in features for creating agents, uploading documents, and reviewing monitoring information. Administrator privileges are required for approving agents, managing places, and correcting statistics.
+- Signed-in features for creating agents, uploading documents, and reviewing monitoring information. Administrator privileges are required for approving agents, viewing guardrail audit events, managing places, and correcting statistics.
 
 The system provides information and routing support. It does not replace emergency services, medical care, legal advice, humanitarian verification, or official casualty accounting.
 
@@ -32,7 +32,7 @@ The normal flow is:
 7. The system retrieves relevant excerpts only from that agent’s documents and generates a concise answer.
 8. If trustworthy excerpts are unavailable, the agent should say that it does not have enough trusted information instead of inventing facts.
 
-Users may chat with any approved public agent without logging in. Login is required for creating agents, uploading documents, and using signed-in monitoring functions. Only administrators can approve newly created agents, edit `Known places`, or manage statistics. Users who need these privileges should email `mainanorbert90@gmail` and include their account email.
+Users may chat with any approved public agent without logging in. Login is required for creating agents, uploading documents, and using signed-in monitoring functions. Only administrators can approve newly created agents, view the `/guardrails` audit page, edit `Known places`, or manage statistics. The `Guardrails` dashboard navigation button is shown only to administrators, and non-administrators cannot access the page by entering its URL directly. Administrator access is granted only to account emails listed in the backend `.env` file's `ADMIN_EMAILS` setting. Users who need these privileges should email `mainanorbert90@gmail` and include their account email.
 
 ## 3. Creating useful agents
 
@@ -196,7 +196,7 @@ When testing, remember:
 - Statistics count reports, not people, and repeated reports are not automatically deduplicated across separate messages.
 - Agent answers are limited to the selected agent’s uploaded knowledge base.
 - Uploaded documents determine answer quality; missing, outdated, contradictory, or fabricated documents produce poor or unsafe results.
-- Public chat does not require login. Viewing monitoring information and creating agents require authentication; approving agents, correcting statistics, and managing known places require administrator privileges.
+- Public chat does not require login. Viewing statistics and creating agents require authentication; approving agents, viewing `/guardrails` audit events, correcting statistics, and managing known places require administrator privileges. The `Guardrails` navigation button and `/guardrails` page are available only to emails configured in the backend `.env` file's `ADMIN_EMAILS` setting.
 - An agent creator cannot make an agent public without administrator approval.
 - Notification providers and Google Maps require deployment configuration and may be unavailable in local development.
 - The platform should not be used as the sole source for emergency dispatch, official statistics, legal decisions, medical decisions, or security operations.
