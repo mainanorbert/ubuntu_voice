@@ -10,10 +10,10 @@ The system supports:
 - WhatsApp conversations routed through a configured Twilio number.
 - Agent-specific PDF knowledge bases and retrieval-grounded answers.
 - Emergency-report classification and regional statistics.
-- A statistics table and map for monitoring reported locations.
+- A statistics table and map for monitoring reported locations and incident statuses.
 - Optional email, SMS, and push notifications for urgent conflict alerts.
 - Note: SMS, and push notifications for urgent conflict alerts not configured for now
-- Signed-in administration for creating agents, uploading documents, managing places, correcting statistics, and reviewing monitoring information.
+- Signed-in features for creating agents, uploading documents, and reviewing monitoring information. Administrator privileges are required for approving agents, managing places, and correcting statistics.
 
 The system provides information and routing support. It does not replace emergency services, medical care, legal advice, humanitarian verification, or official casualty accounting.
 
@@ -32,7 +32,7 @@ The normal flow is:
 7. The system retrieves relevant excerpts only from that agent’s documents and generates a concise answer.
 8. If trustworthy excerpts are unavailable, the agent should say that it does not have enough trusted information instead of inventing facts.
 
-Users may chat with any approved public agent without logging in. Login is required for creating or managing agents and for signed-in monitoring functions.
+Users may chat with any approved public agent without logging in. Login is required for creating agents, uploading documents, and using signed-in monitoring functions. Only administrators can approve newly created agents, edit `Known places`, or manage statistics. Users who need these privileges should email `mainanorbert90@gmail` and include their account email.
 
 ## 3. Creating useful agents
 
@@ -54,7 +54,7 @@ The [`test_data/`](test_data/) directory contains documents for several example 
 Users should write reports as concrete, factual messages. The most useful report contains:
 
 - What happened.
-- Where it happened: use a specific city, town, camp, county, or other known place.
+- Where it happened: before reporting, check `Known places` in the dashboard and use a specific configured city, town, camp, county, or other listed place.
 - When it happened, if known.
 - The number of people affected, injured, displaced, missing, or dead, if known.
 - Any immediate safety concern.
@@ -68,7 +68,7 @@ Examples:
 
 Avoid unsupported conclusions, rumors, personal names, phone numbers, email addresses, account IDs, and unnecessary identifying details. Do not include sensitive information unless it is essential for a safe response.
 
-A place is important because the statistics system groups reports by agent, normalized place, and incident category. Reports without a concrete place may receive an emergency response but normally cannot become a regional statistics row.
+A place is required if you want the report’s incident status to be recorded in the statistics and shown on the map. Before reporting, check `Known places` in the dashboard and use one of the configured place names in your report. Reports without a concrete place may still receive an emergency response, but they normally cannot be recorded as a statistics row or displayed as a map status.
 
 ## 5. Emergency categories and statistics
 
@@ -120,6 +120,8 @@ Signed-in users can open the statistics view to see rows containing:
 
 The dashboard also displays category totals and recent reported activity. The map groups records by place and displays separate colored markers for reported categories.
 
+Only reports that contain a recognized place can produce a recorded status and a map marker. To have a report included in the statistics and shown on the map, first check `Known places` in the dashboard and report the incident using a specific place listed there.
+
 Map colors currently represent:
 
 - Red: Rights Violations.
@@ -133,17 +135,18 @@ The system does not capture a user’s GPS location and does not geocode the rep
 
 Consequences:
 
-- A report may be saved in the statistics table but not appear on the map if its place is not in `Known places`.
+- A report without a place may receive a response but will normally not create a statistics row, incident status, or map marker.
+- A report with a place that is not in `Known places` may be saved in the statistics table but will not appear on the map until the place is configured and matched.
 - A misspelled or ambiguous place may not match the intended location.
 - A marker represents the configured coordinates for a known place, not the exact location of the incident or reporter.
 - Several incidents in the same city may appear at the same map point.
 - Map points and statistics are not proof that an incident occurred at those coordinates.
 
-Authorized signed-in users can open `Manage known places` to add, edit, deactivate, or correct a place’s name, country, latitude, and longitude. Place changes affect future map matching and display.
+Only administrators can open `Manage known places` to add, edit, deactivate, or correct a place’s name, country, latitude, and longitude. Place changes affect future map matching and display.
 
 ## 9. Correcting statistics
 
-Signed-in users can edit or delete a statistic row when a classifier result is wrong. Editing allows correction of:
+Only administrators can edit or delete a statistic row when a classifier result is wrong. Editing allows correction of:
 
 - Place.
 - Sanitized description.
@@ -151,6 +154,7 @@ Signed-in users can edit or delete a statistic row when a classifier result is w
 - Total report count.
 
 The system prevents duplicate rows for the same agent, normalized place, and category. If a matching row already exists, edit that row rather than creating another one. Delete incorrect rows carefully because deletion removes the aggregate record; it does not recover the original report.
+
 
 ## 10. Web chat and WhatsApp testing
 
@@ -161,7 +165,7 @@ The system prevents duplicate rows for the same agent, normalized place, and cat
 3. Send a general question and verify that the answer is grounded in that agent’s documents.
 4. Send a specific emergency report containing a category, place, and number.
 5. Wait briefly for background classification.
-6. Sign in and verify the statistics table and, when the place is configured, the map.
+6. Sign in and verify the statistics row and incident status; if the reported place is configured in `Known places`, verify that the corresponding map marker is displayed.
 
 ### WhatsApp
 
@@ -176,7 +180,7 @@ Users can chat with an approved agent through WhatsApp at **+254 106 539 556**.
 7. The selected agent replies using its approved knowledge base. Emergency reports are also classified in the background for statistics.
 8. To choose another agent, send `MENU`, `AGENTS`, or `SWITCH`, then select another number.
 
-For reliable incident statistics, include the issue, a specific place, and any known numbers. For example: `Two people were killed in Nyala today` or `Families were displaced from El Fasher and need shelter.`
+For the incident status to be recorded and shown on the map, first check `Known places` in the dashboard, then include the issue and use a specific place listed there. Include any known numbers as well. For example: `Two people were killed in Nyala today` or `Families were displaced from El Fasher and need shelter.`
 
 The first numbered reply is only an agent-selection message and is not classified as an incident. The report must be sent after the agent has been selected. Verify the resulting row in the signed-in statistics table after background processing completes.
 
@@ -188,11 +192,11 @@ When testing, remember:
 
 - Background classification is best effort and may be delayed or fail if the model provider, database, or deployment process is unavailable.
 - A malformed or unsupported classifier result is rejected rather than written to the database.
-- Reports with no concrete place may not produce statistics.
+- Reports with no concrete place may receive a response but do not normally produce a statistics row, incident status, or map marker.
 - Statistics count reports, not people, and repeated reports are not automatically deduplicated across separate messages.
 - Agent answers are limited to the selected agent’s uploaded knowledge base.
 - Uploaded documents determine answer quality; missing, outdated, contradictory, or fabricated documents produce poor or unsafe results.
-- Public chat does not require login, but monitoring, corrections, known-place management, and agent management require authentication.
+- Public chat does not require login. Viewing monitoring information and creating agents require authentication; approving agents, correcting statistics, and managing known places require administrator privileges.
 - An agent creator cannot make an agent public without administrator approval.
 - Notification providers and Google Maps require deployment configuration and may be unavailable in local development.
 - The platform should not be used as the sole source for emergency dispatch, official statistics, legal decisions, medical decisions, or security operations.
@@ -217,8 +221,10 @@ The following workflow checks can also be used to verify the agent and platform 
 3. A report with one category and one place: verify one new row.
 4. A report with two categories and one place: verify two rows.
 5. A repeated report for the same place and category: verify that the count increments.
-6. A report with an unknown place: verify the table behavior and confirm that the map may have no marker.
+6. A report with no place or an unknown place: verify that it may not produce a status or map marker; confirm that an unknown place may be saved in the table without appearing on the map.
 7. A report containing a phone number or email: verify that stored descriptions are sanitized.
 8. An imminent conflict message: verify configured alert behavior without assuming delivery.
 9. An unapproved agent: verify that it is unavailable to public web and WhatsApp users.
 10. A corrected statistic and known place: verify that the table and map refresh correctly.
+
+For any inquiries or support, users can contact `mainanorbert90@gmail.com`.

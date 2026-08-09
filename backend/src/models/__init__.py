@@ -305,6 +305,38 @@ class IncidentStatistic(Base):
     )
 
 
+class DirectUploadTicket(Base):
+    """Server-owned metadata for one browser direct-upload confirmation."""
+
+    __tablename__ = "direct_upload_tickets"
+    __table_args__ = (
+        Index("ix_direct_upload_tickets_company_owner", "company_id", "uploaded_by"),
+        Index("ix_direct_upload_tickets_uploaded_by", "uploaded_by"),
+    )
+
+    # The ticket identifier is also the document identifier reserved for the
+    # eventual metadata row.  It is only accepted with the immutable fields below.
+    document_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    company_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    uploaded_by: Mapped[str] = mapped_column(
+        Text,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    file_name: Mapped[str] = mapped_column(Text, nullable=False)
+    file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    content_type: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
 class DocumentChunk(Base):
     """Text segment and embedding vector for RAG; tenant-scoped via ``company_id``."""
 

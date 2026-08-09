@@ -2,8 +2,8 @@
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy.exc import SQLAlchemyError
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.api.v1.schemas.ingestion import (
@@ -26,6 +26,7 @@ from src.models import (
     Company,
     Document,
     DocumentChunk,
+    DirectUploadTicket,
     EvaluationQuestion,
     EvaluationResult,
     EvaluationRun,
@@ -98,6 +99,33 @@ def build_document_response(document) -> DocumentResponse:
         is_embedded=document.is_embedded,
         created_at=document.created_at,
     )
+
+
+def documents_match_upload_tickets(
+    documents_by_id: dict[str, Document],
+    *,
+    ticket_ids: list[str],
+    tickets_by_id: dict[str, DirectUploadTicket],
+    company_id: str,
+    uploaded_by: str,
+) -> bool:
+    """Return whether documents are the exact prior finalization of tickets."""
+    if len(documents_by_id) != len(ticket_ids):
+        return False
+    for ticket_id in ticket_ids:
+        document = documents_by_id.get(ticket_id)
+        ticket = tickets_by_id.get(ticket_id)
+        if document is None or ticket is None:
+            return False
+        if (
+            document.company_id != company_id
+            or document.uploaded_by != uploaded_by
+            or document.file_name != ticket.file_name
+            or document.file_path != ticket.file_path
+            or document.file_type != ticket.content_type
+        ):
+            return False
+    return True
 
 
 @router.get("", response_model=list[CompanyResponse])
@@ -492,6 +520,26 @@ async def post_company_document_uploads(
             detail=f"Could not mint upload URL: {exc}",
         ) from exc
 
+    try:
+        for ticket in tickets:
+            db_session.add(
+                DirectUploadTicket(
+                    document_id=ticket.document_id,
+                    company_id=company.id,
+                    uploaded_by=user.id,
+                    file_name=ticket.file_name,
+                    file_path=ticket.file_path,
+                    content_type=ticket.content_type,
+                )
+            )
+        db_session.commit()
+    except SQLAlchemyError as exc:
+        db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not prepare document uploads. Please try again.",
+        ) from exc
+
     return DocumentUploadsResponse(mode="direct", uploads=tickets)
 
 
@@ -507,6 +555,7 @@ async def post_company_document_confirm(
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
     background_tasks: BackgroundTasks,
+    response: Response,
 ) -> list[DocumentResponse]:
     """Persist DB rows for files the browser has just PUT to Supabase directly.
 
@@ -524,14 +573,61 @@ async def post_company_document_confirm(
     user, _created = upsert_user(db_session, user_id=identity.user_id, email=identity.email)
     company = get_owned_company(db_session, company_id=company_id, owner_id=user.id)
 
-    expected_prefix = f"storage/{company.id}/"
+    ticket_ids = [item.document_id for item in payload.documents]
+    if len(set(ticket_ids)) != len(ticket_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Each upload ticket may only appear once in a confirmation request.",
+        )
+
+    issued_tickets = (
+        db_session.query(DirectUploadTicket)
+        .filter(
+            DirectUploadTicket.document_id.in_(ticket_ids),
+            DirectUploadTicket.company_id == company.id,
+            DirectUploadTicket.uploaded_by == user.id,
+        )
+        .all()
+    )
+    tickets_by_id = {ticket.document_id: ticket for ticket in issued_tickets}
     for item in payload.documents:
-        if not item.file_path.startswith(expected_prefix):
+        ticket = tickets_by_id.get(item.document_id)
+        if ticket is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"file_path {item.file_path!r} does not belong to this company.",
+                detail="This upload confirmation does not match an issued upload ticket.",
             )
-        ensure_document_name_is_available(db_session, company_id=company.id, file_name=item.file_name)
+        if (
+            item.file_path != ticket.file_path
+            or item.file_name != ticket.file_name
+            or item.content_type != ticket.content_type
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This upload confirmation does not match its issued upload ticket.",
+            )
+
+    existing_by_id = {
+        document.id: document
+        for document in db_session.query(Document).filter(Document.id.in_(ticket_ids)).all()
+    }
+    if existing_by_id:
+        if documents_match_upload_tickets(
+            existing_by_id,
+            ticket_ids=ticket_ids,
+            tickets_by_id=tickets_by_id,
+            company_id=company.id,
+            uploaded_by=user.id,
+        ):
+            # A completed ticket is replay-safe even if the object has since
+            # been removed by an explicit document deletion.
+            db_session.commit()
+            response.status_code = status.HTTP_200_OK
+            return [build_document_response(existing_by_id[ticket_id]) for ticket_id in ticket_ids]
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="One or more upload tickets have already been finalized with different metadata.",
+        )
 
     stored_files: list[tuple[str, StoredDocumentFile]] = []
     try:
@@ -575,6 +671,47 @@ async def post_company_document_confirm(
 
     documents = []
     try:
+        # Lock tickets in a stable order only for finalization. Storage I/O above
+        # remains outside the transaction, keeping contention short.
+        locked_tickets = (
+            db_session.query(DirectUploadTicket)
+            .filter(
+                DirectUploadTicket.document_id.in_(ticket_ids),
+                DirectUploadTicket.company_id == company.id,
+                DirectUploadTicket.uploaded_by == user.id,
+            )
+            .order_by(DirectUploadTicket.document_id)
+            .with_for_update()
+            .all()
+        )
+        if len(locked_tickets) != len(ticket_ids):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="One or more upload tickets are no longer available. Please upload again.",
+            )
+
+        existing_by_id = {
+            document.id: document
+            for document in db_session.query(Document).filter(Document.id.in_(ticket_ids)).all()
+        }
+        if existing_by_id:
+            if documents_match_upload_tickets(
+                existing_by_id,
+                ticket_ids=ticket_ids,
+                tickets_by_id=tickets_by_id,
+                company_id=company.id,
+                uploaded_by=user.id,
+            ):
+                # The first request already finalized these ticket(s). A replay is
+                # successful and must not trigger object cleanup.
+                db_session.commit()
+                response.status_code = status.HTTP_200_OK
+                return [build_document_response(existing_by_id[ticket_id]) for ticket_id in ticket_ids]
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="One or more upload tickets have already been finalized with different metadata.",
+            )
+
         for document_id, stored in stored_files:
             doc = create_document_record(
                 db_session,
@@ -591,14 +728,25 @@ async def post_company_document_confirm(
             upload_root=settings.upload_root,
             company_id=company.id,
         )
+    except HTTPException:
+        db_session.rollback()
+        raise
+    except IntegrityError as exc:
+        db_session.rollback()
+        # Do not delete a direct-upload object here. Another in-flight replay
+        # may hold the same ticket and have already verified that object.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A document with this name already exists for this company.",
+        ) from exc
     except SQLAlchemyError as exc:
         db_session.rollback()
-        for _doc_id, stored in stored_files:
-            try:
-                await delete_stored_document_file(settings=settings, file_path=stored.file_path)
-            except Exception:  # noqa: BLE001 — cleanup must not mask the original error
-                pass
-        raise exc
+        # Direct-upload objects are intentionally retained on DB failure so a
+        # retry cannot be left pointing at a missing file.
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not save document metadata. Please try again.",
+        ) from exc
 
     for doc in documents:
         db_session.refresh(doc)
