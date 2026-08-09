@@ -3,7 +3,8 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
 from src.api.v1.routers import agents, auth, companies, evaluations, monitoring, users, webhooks
@@ -11,6 +12,7 @@ from src.core.config import Settings
 from src.core.database import Base
 from src.core.dependencies import get_database_engine, get_settings
 from src.core.pgvector_setup import database_url_is_postgresql, ensure_pgvector_extension
+from src.core.rate_limit import SlidingWindowRateLimiter
 import src.models  # noqa: F401
 from src.services.supabase_storage import uses_supabase_storage
 
@@ -59,6 +61,31 @@ app = FastAPI(
     openapi_url=None if is_production else "/openapi.json",
 )
 maybe_install_cors_middleware(app=app, settings=settings)
+
+chat_rate_limiter = SlidingWindowRateLimiter(
+    limit=settings.chat_rate_limit_requests_per_minute,
+    window_seconds=60,
+)
+
+
+@app.middleware("http")
+async def limit_public_chat_requests(request: Request, call_next):
+    """Limit repeated public chat submissions before they reach costly services."""
+    if request.method == "POST" and request.url.path == "/api/v1/agents/chat":
+        # Use the socket peer address. Forwarded headers are deliberately not
+        # trusted here because they can be spoofed unless a trusted proxy is
+        # configured explicitly.
+        client_ip = request.client.host if request.client is not None else "unknown"
+        allowed, retry_after = chat_rate_limiter.allow(client_ip)
+        if not allowed:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many chat requests. Please wait a moment and try again."},
+                headers={"Retry-After": str(retry_after)},
+            )
+    return await call_next(request)
+
+
 app.include_router(agents.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")

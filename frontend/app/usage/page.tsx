@@ -17,6 +17,8 @@ type UserSpendResponse = {
   updated_at: string
 }
 
+type AuthProfile = { is_admin?: unknown }
+
 // Builds a readable error string from common API payload shapes.
 function format_error_payload(data: unknown): string {
   if (typeof data !== "object" || data === null) return "Request failed"
@@ -60,6 +62,7 @@ export default function UsagePage() {
   const [loading, set_loading] = useState(true)
   const [refreshing, set_refreshing] = useState(false)
   const [error, set_error] = useState<string | null>(null)
+  const [is_admin, set_is_admin] = useState<boolean | null>(null)
 
   /**
    * Loads cumulative usage rows from the authenticated backend proxy.
@@ -86,9 +89,17 @@ export default function UsagePage() {
   }, [])
 
   useEffect(() => {
+    void fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((profile: AuthProfile | null) => set_is_admin(profile?.is_admin === true))
+      .catch(() => set_is_admin(false))
+  }, [])
+
+  useEffect(() => {
+    if (is_admin !== true) return
     const timeout_id = window.setTimeout(() => void load_rows("initial"), 0)
     return () => window.clearTimeout(timeout_id)
-  }, [load_rows])
+  }, [is_admin, load_rows])
 
   const summary = useMemo(
     () =>
@@ -101,6 +112,16 @@ export default function UsagePage() {
       ),
     [rows],
   )
+
+  if (is_admin === false) {
+    return (
+      <DashboardShell title="Access restricted" description="Usage data is available to administrators only.">
+        <div className="rounded-xl border border-[#dce4ef] bg-white p-5 text-sm text-muted-foreground shadow-sm">
+          Your account is not authorized to view usage data.
+        </div>
+      </DashboardShell>
+    )
+  }
 
   return (
     <DashboardShell title="Usage" description="Monitor model spend and request volume.">

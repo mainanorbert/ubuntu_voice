@@ -19,7 +19,7 @@ from src.api.v1.schemas.ingestion import (
     DocumentUploadTicket,
     EmbedTriggerResponse,
 )
-from src.core.auth import UserIdentity, get_authenticated_user_identity, is_admin_email, require_auth_session
+from src.core.auth import UserIdentity, get_authenticated_user_identity, require_admin, require_auth_session
 from src.core.config import Settings
 from src.core.dependencies import get_db_session, get_settings
 from src.models import (
@@ -94,12 +94,6 @@ def build_document_response(document) -> DocumentResponse:
         is_embedded=document.is_embedded,
         created_at=document.created_at,
     )
-
-
-def require_admin(identity: UserIdentity, settings: Settings) -> None:
-    """Reject users whose email is not explicitly configured as an admin."""
-    if not is_admin_email(identity.email, settings.admin_emails):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator access is required.")
 
 
 @router.get("", response_model=list[CompanyResponse])
