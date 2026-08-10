@@ -5,6 +5,7 @@
 - [1. What the system does](#1-what-the-system-does)
 - [2. How an agent works](#2-how-an-agent-works)
 - [3. Creating useful agents](#3-creating-useful-agents)
+- [Evaluation datasets and `/test_data`](#evaluation-datasets-and-test_data)
 - [4. How users should report an emergency](#4-how-users-should-report-an-emergency)
 - [5. Emergency categories and statistics](#5-emergency-categories-and-statistics)
 - [6. Emergency answers and notifications](#6-emergency-answers-and-notifications)
@@ -14,7 +15,8 @@
 - [10. Web chat and WhatsApp testing](#10-web-chat-and-whatsapp-testing)
 - [11. Test constraints and expected limitations](#11-test-constraints-and-expected-limitations)
 - [12. Recommended test cases](#12-recommended-test-cases)
-- [13. Support](#13-support)
+- [13. Walkthrough video](#13-walkthrough-video)
+- [14. Support](#14-support)
 
 ## 1. What the system does
 
@@ -68,6 +70,22 @@ Do not upload documents containing unnecessary personal data, secrets, passwords
 The [`test_data/`](test_data/) directory contains documents for several example agents, together with example evaluation questions and reference answers. After creating an agent and uploading its documents, users can use these files to test and evaluate their own agent before requesting approval. They can also create their own test data using documents and question-and-reference-answer pairs that match the agent's purpose. The sample contacts are suitable for testing the workflow only; they must be replaced with verified operational contacts in a real deployment.
 
 Creators may evaluate an agent while it is pending approval and use the results to improve its documents, instructions, and test data. This private evaluation workflow does not make the agent public: only an administrator can approve an agent and make it available in the public web directory and WhatsApp menu.
+
+### Evaluation datasets and `/test_data`
+
+Use the [`test_data/`](test_data/) directory when preparing an agent for evaluation. It contains one folder for each example agent. Inside each agent folder, the `evaluation_dataset_samples.md` file contains sample test questions and reference answers that match the documents in that same folder.
+
+For a proper evaluation, select the correct agent from the agent list in `/evaluations`. Add only questions and reference answers that are relevant to that agent and supported by its current uploaded knowledge base. Questions from another agent, or reference answers based on documents that have not been uploaded, will produce misleading evaluation results.
+
+To use the samples:
+
+1. Create or select the matching agent in the application.
+2. Upload that agent folder's PDF documents to the agent's knowledge base.
+3. Open `/evaluations` and select the matching agent from the agent list.
+4. Copy only relevant sample questions and reference answers from that agent's `evaluation_dataset_samples.md` file into the evaluation dataset form.
+5. Run the evaluation and review correctness, relevance, groundedness, and retrieval relevance.
+
+For example, use [`test_data/sudan peace agent/evaluation_dataset_samples.md`](test_data/sudan%20peace%20agent/evaluation_dataset_samples.md) with the Sudan Peace Agent documents, and use the equivalent sample file in the Congo or Somalia folder for those agents. Do not mix a question and reference answer from one agent with another agent's documents. The samples are for testing the workflow; operational contacts and facts must be verified before deployment.
 
 ## 4. How users should report an emergency
 
@@ -249,6 +267,10 @@ The following workflow checks can also be used to verify the agent and platform 
 9. A pending agent: evaluate it with questions and reference answers from [`test_data/`](test_data/) or custom test data, then verify that it remains unavailable to public web and WhatsApp users until approved.
 10. A corrected statistic and known place: verify that the table and map refresh correctly.
 
-## 13. Support
+## 13. Walkthrough video
+
+Watch the [Ubuntu Voice walkthrough video](https://www.youtube.com/watch?v=_O3LJtk8dBo) for a guided demonstration of the platform.
+
+## 14. Support
 
 For permission grants, administrator access requests, account or agent approval questions, technical issues, or any other inquiries about the Ubuntu Voice app, users can email `mainanorbert90@gmail.com`. When requesting permission, include the account email used to sign in and briefly explain the access required. Do not include passwords, API keys, or other sensitive credentials in the email.
