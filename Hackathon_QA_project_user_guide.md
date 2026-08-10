@@ -15,7 +15,8 @@
 - [10. Web chat and WhatsApp testing](#10-web-chat-and-whatsapp-testing)
 - [11. Test constraints and expected limitations](#11-test-constraints-and-expected-limitations)
 - [12. Recommended test cases](#12-recommended-test-cases)
-- [13. Support](#13-support)
+- [13. Walkthrough video](#13-walkthrough-video)
+- [14. Support](#14-support)
 
 ## 1. What the system does
 
@@ -266,6 +267,10 @@ The following workflow checks can also be used to verify the agent and platform 
 9. A pending agent: evaluate it with questions and reference answers from [`test_data/`](test_data/) or custom test data, then verify that it remains unavailable to public web and WhatsApp users until approved.
 10. A corrected statistic and known place: verify that the table and map refresh correctly.
 
-## 13. Support
+## 13. Walkthrough video
+
+Watch the [Ubuntu Voice walkthrough video](https://www.youtube.com/watch?v=_O3LJtk8dBo) for a guided demonstration of the platform.
+
+## 14. Support
 
 For permission grants, administrator access requests, account or agent approval questions, technical issues, or any other inquiries about the Ubuntu Voice app, users can email `mainanorbert90@gmail.com`. When requesting permission, include the account email used to sign in and briefly explain the access required. Do not include passwords, API keys, or other sensitive credentials in the email.
