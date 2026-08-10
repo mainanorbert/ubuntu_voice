@@ -1,5 +1,21 @@
 # Ubuntu Voice: Functional and Testing Guide
 
+## Table of contents
+
+- [1. What the system does](#1-what-the-system-does)
+- [2. How an agent works](#2-how-an-agent-works)
+- [3. Creating useful agents](#3-creating-useful-agents)
+- [4. How users should report an emergency](#4-how-users-should-report-an-emergency)
+- [5. Emergency categories and statistics](#5-emergency-categories-and-statistics)
+- [6. Emergency answers and notifications](#6-emergency-answers-and-notifications)
+- [7. Statistics table and map](#7-statistics-table-and-map)
+- [8. Important map limitation](#8-important-map-limitation)
+- [9. Correcting statistics](#9-correcting-statistics)
+- [10. Web chat and WhatsApp testing](#10-web-chat-and-whatsapp-testing)
+- [11. Test constraints and expected limitations](#11-test-constraints-and-expected-limitations)
+- [12. Recommended test cases](#12-recommended-test-cases)
+- [13. Support](#13-support)
+
 ## 1. What the system does
 
 Ubuntu Voice is a low-bandwidth emergency-information and peace-support platform. It connects users to community-defined AI agents that answer questions from trusted documents uploaded for that agent.
@@ -26,11 +42,13 @@ The normal flow is:
 1. An authenticated user creates an agent with a name, contact email, and optional phone number and description.
 2. The creator uploads relevant PDF documents for that agent.
 3. The system extracts the text, divides it into searchable sections, and creates embeddings.
-4. An administrator reviews and approves the agent.
-5. Only approved agents appear in the public agent directory and WhatsApp selection menu.
-6. A user selects an approved agent and asks a question.
-7. The system retrieves relevant excerpts only from that agent’s documents and generates a concise answer.
-8. If trustworthy excerpts are unavailable, the agent should say that it does not have enough trusted information instead of inventing facts.
+4. Before approval, the creator tests and evaluates the agent using questions based on its uploaded documents. The creator can use the example files in [`test_data/`](test_data/) or add custom test documents, questions, and reference answers for the agent.
+5. The creator improves the documents, instructions, or test data based on the evaluation results and submits the agent for administrator review.
+6. An administrator reviews and approves the agent.
+7. Only approved agents appear in the public agent directory and WhatsApp selection menu.
+8. A user selects an approved agent and asks a question.
+9. The system retrieves relevant excerpts only from that agent’s documents and generates a concise answer.
+10. If trustworthy excerpts are unavailable, the agent should say that it does not have enough trusted information instead of inventing facts.
 
 Users may chat with any approved public agent without logging in. Login is required for creating agents, uploading documents, and using signed-in monitoring functions. Only administrators can approve newly created agents, view the `/guardrails` audit page, edit `Known places`, or manage statistics. The `Guardrails` dashboard navigation button is shown only to administrators, and non-administrators cannot access the page by entering its URL directly. Administrator access is granted only to account emails listed in the backend `.env` file's `ADMIN_EMAILS` setting. Users who need these privileges should email `mainanorbert90@gmail` and include their account email.
 
@@ -47,7 +65,9 @@ An agent should have a clearly defined purpose and a document collection that ma
 
 Do not upload documents containing unnecessary personal data, secrets, passwords, API keys, or unverified claims.
 
-The [`test_data/`](test_data/) directory contains documents for several example agents, together with example evaluation questions and reference answers. Users can use these examples to test and evaluate their agents, or create their own test data using documents and question-and-reference-answer pairs that match their agent's purpose. The sample contacts are suitable for testing the workflow only; they must be replaced with verified operational contacts in a real deployment.
+The [`test_data/`](test_data/) directory contains documents for several example agents, together with example evaluation questions and reference answers. After creating an agent and uploading its documents, users can use these files to test and evaluate their own agent before requesting approval. They can also create their own test data using documents and question-and-reference-answer pairs that match the agent's purpose. The sample contacts are suitable for testing the workflow only; they must be replaced with verified operational contacts in a real deployment.
+
+Creators may evaluate an agent while it is pending approval and use the results to improve its documents, instructions, and test data. This private evaluation workflow does not make the agent public: only an administrator can approve an agent and make it available in the public web directory and WhatsApp menu.
 
 ## 4. How users should report an emergency
 
@@ -146,7 +166,9 @@ Only administrators can open `Manage known places` to add, edit, deactivate, or 
 
 ## 9. Correcting statistics
 
-Only administrators can edit or delete a statistic row when a classifier result is wrong. Editing allows correction of:
+Only administrators can edit or delete a statistic row when a classifier result is wrong. Users who need to modify a statistic must request permission first by emailing `mainanorbert90@gmail.com`. Include the account email used to sign in and explain which statistic requires correction and why. Do not attempt to modify statistics without the required permission.
+
+After permission is granted, editing allows correction of:
 
 - Place.
 - Sanitized description.
@@ -224,7 +246,9 @@ The following workflow checks can also be used to verify the agent and platform 
 6. A report with no place or an unknown place: verify that it may not produce a status or map marker; confirm that an unknown place may be saved in the table without appearing on the map.
 7. A report containing a phone number or email: verify that stored descriptions are sanitized.
 8. An imminent conflict message: verify configured alert behavior without assuming delivery.
-9. An unapproved agent: verify that it is unavailable to public web and WhatsApp users.
+9. A pending agent: evaluate it with questions and reference answers from [`test_data/`](test_data/) or custom test data, then verify that it remains unavailable to public web and WhatsApp users until approved.
 10. A corrected statistic and known place: verify that the table and map refresh correctly.
 
-For any inquiries or support, users can contact `mainanorbert90@gmail.com`.
+## 13. Support
+
+For permission grants, administrator access requests, account or agent approval questions, technical issues, or any other inquiries about the Ubuntu Voice app, users can email `mainanorbert90@gmail.com`. When requesting permission, include the account email used to sign in and briefly explain the access required. Do not include passwords, API keys, or other sensitive credentials in the email.
