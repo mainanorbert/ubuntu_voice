@@ -67,7 +67,7 @@ An agent should have a clearly defined purpose and a document collection that ma
 
 Do not upload documents containing unnecessary personal data, secrets, passwords, API keys, or unverified claims.
 
-The [`test_data/`](test_data/) directory contains documents for several example agents, together with example evaluation questions and reference answers. After creating an agent and uploading its documents, users can use these files to test and evaluate their own agent before requesting approval. They can also create their own test data using documents and question-and-reference-answer pairs that match the agent's purpose. The sample contacts are suitable for testing the workflow only; they must be replaced with verified operational contacts in a real deployment.
+The [`test_data/`](test_data/) directory contains documents for several example agents, together with example evaluation questions and reference answers. After creating an agent and uploading its documents, users can use these files to test and evaluate their own agent before requesting approval. They can also create their own test data using documents and question-and-reference-answer pairs that match the agent's purpose. The sample contacts are suitable for testing the workflow only.
 
 Creators may evaluate an agent while it is pending approval and use the results to improve its documents, instructions, and test data. This private evaluation workflow does not make the agent public; administrator approval is required before the agent is available in the public web directory and WhatsApp menu.
 
@@ -254,18 +254,8 @@ For each question:
 
 The examples in [`test_data/`](test_data/) can be used as a starting evaluation set. Users should add their own questions and reference answers to test the topics and documents specific to their agents. Agent accuracy should be judged against the reference answer, not only by whether the response is fluent or well written.
 
-The following workflow checks can also be used to verify the agent and platform behavior:
 
-1. A greeting: verify a short response and no incident statistic.
-2. A document-specific question: verify retrieval from the selected agent only.
-3. A report with one category and one place: verify one new row.
-4. A report with two categories and one place: verify two rows.
-5. A repeated report for the same place and category: verify that the count increments.
-6. A report with no place or an unknown place: verify that it may not produce a status or map marker; confirm that an unknown place may be saved in the table without appearing on the map.
-7. A report containing a phone number or email: verify that stored descriptions are sanitized.
-8. An imminent conflict message: verify configured alert behavior without assuming delivery.
-9. A pending agent: evaluate it with questions and reference answers from [`test_data/`](test_data/) or custom test data, then verify that it remains unavailable to public web and WhatsApp users until approved.
-10. A corrected statistic and known place: verify that the table and map refresh correctly.
+Understanding the information above will help you know how best to hack the system and identify bugs.
 
 ## 13. Walkthrough video
 
