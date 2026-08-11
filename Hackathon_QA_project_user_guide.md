@@ -31,7 +31,7 @@ The system supports:
 - A statistics table and map for monitoring reported locations and incident statuses.
 - Optional email, SMS, and push notifications for urgent conflict alerts.
 - Note: SMS, and push notifications for urgent conflict alerts not configured for now
-- Signed-in features for creating agents, uploading documents, and reviewing monitoring information. Administrator privileges are required for approving agents, viewing guardrail audit events, managing places, and correcting statistics.
+- Signed-in features for creating agents, uploading documents, and reviewing monitoring information. Administrator privileges are needed only for approving agents, editing known places, and correcting statistics.
 
 The system provides information and routing support. It does not replace emergency services, medical care, legal advice, humanitarian verification, or official casualty accounting.
 
@@ -45,14 +45,14 @@ The normal flow is:
 2. The creator uploads relevant PDF documents for that agent.
 3. The system extracts the text, divides it into searchable sections, and creates embeddings.
 4. Before approval, the creator tests and evaluates the agent using questions based on its uploaded documents. The creator can use the example files in [`test_data/`](test_data/) or add custom test documents, questions, and reference answers for the agent.
-5. The creator improves the documents, instructions, or test data based on the evaluation results and submits the agent for administrator review.
-6. An administrator reviews and approves the agent.
+5. The creator improves the documents, instructions, or test data based on the evaluation results and submits the agent for approval.
+6. The agent is reviewed and approved before it is made public.
 7. Only approved agents appear in the public agent directory and WhatsApp selection menu.
 8. A user selects an approved agent and asks a question.
 9. The system retrieves relevant excerpts only from that agent’s documents and generates a concise answer.
 10. If trustworthy excerpts are unavailable, the agent should say that it does not have enough trusted information instead of inventing facts.
 
-Users may chat with any approved public agent without logging in. Login is required for creating agents, uploading documents, and using signed-in monitoring functions. Only administrators can approve newly created agents, view the `/guardrails` audit page, edit `Known places`, or manage statistics. The `Guardrails` dashboard navigation button is shown only to administrators, and non-administrators cannot access the page by entering its URL directly. Administrator access is granted only to account emails listed in the backend `.env` file's `ADMIN_EMAILS` setting. Users who need these privileges should email `mainanorbert90@gmail` and include their account email.
+Users may chat with any approved public agent without logging in. Login is required for creating agents, uploading documents, and using signed-in monitoring functions. Existing user access is sufficient for the hackathon. Request administrator access only when an agent needs approval, a known place must be added, edited, deactivated, or corrected, or a statistic must be corrected or deleted.
 
 ## 3. Creating useful agents
 
@@ -69,7 +69,7 @@ Do not upload documents containing unnecessary personal data, secrets, passwords
 
 The [`test_data/`](test_data/) directory contains documents for several example agents, together with example evaluation questions and reference answers. After creating an agent and uploading its documents, users can use these files to test and evaluate their own agent before requesting approval. They can also create their own test data using documents and question-and-reference-answer pairs that match the agent's purpose. The sample contacts are suitable for testing the workflow only; they must be replaced with verified operational contacts in a real deployment.
 
-Creators may evaluate an agent while it is pending approval and use the results to improve its documents, instructions, and test data. This private evaluation workflow does not make the agent public: only an administrator can approve an agent and make it available in the public web directory and WhatsApp menu.
+Creators may evaluate an agent while it is pending approval and use the results to improve its documents, instructions, and test data. This private evaluation workflow does not make the agent public; administrator approval is required before the agent is available in the public web directory and WhatsApp menu.
 
 ### Evaluation datasets and `/test_data`
 
@@ -180,11 +180,11 @@ Consequences:
 - Several incidents in the same city may appear at the same map point.
 - Map points and statistics are not proof that an incident occurred at those coordinates.
 
-Only administrators can open `Manage known places` to add, edit, deactivate, or correct a place’s name, country, latitude, and longitude. Place changes affect future map matching and display.
+Administrator access is required only to open `Manage known places` and add, edit, deactivate, or correct a place’s name, country, latitude, and longitude. Place changes affect future map matching and display. Existing user access is enough for the rest of the hackathon workflow.
 
 ## 9. Correcting statistics
 
-Only administrators can edit or delete a statistic row when a classifier result is wrong. Users who need to modify a statistic must request permission first by emailing `mainanorbert90@gmail.com`. Include the account email used to sign in and explain which statistic requires correction and why. Do not attempt to modify statistics without the required permission.
+Administrator access is required only to edit or delete a statistic row when a classifier result is wrong. Existing user access is enough for viewing statistics and completing the rest of the hackathon workflow. If a statistic needs correction, request the appropriate administrator access by emailing `mainanorbert90@gmail.com`. Include the account email used to sign in and explain which statistic requires correction and why. Do not attempt to modify statistics without the required permission.
 
 After permission is granted, editing allows correction of:
 
@@ -236,8 +236,8 @@ When testing, remember:
 - Statistics count reports, not people, and repeated reports are not automatically deduplicated across separate messages.
 - Agent answers are limited to the selected agent’s uploaded knowledge base.
 - Uploaded documents determine answer quality; missing, outdated, contradictory, or fabricated documents produce poor or unsafe results.
-- Public chat does not require login. Viewing statistics and creating agents require authentication; approving agents, viewing `/guardrails` audit events, correcting statistics, and managing known places require administrator privileges. The `Guardrails` navigation button and `/guardrails` page are available only to emails configured in the backend `.env` file's `ADMIN_EMAILS` setting.
-- An agent creator cannot make an agent public without administrator approval.
+- Public chat does not require login. Viewing statistics and creating agents require authentication; administrator access is needed only for approving agents, correcting statistics, and managing known places. Existing user access is sufficient for the hackathon.
+- An agent creator cannot make an agent public until it has been approved.
 - Notification providers and Google Maps require deployment configuration and may be unavailable in local development.
 - The platform should not be used as the sole source for emergency dispatch, official statistics, legal decisions, medical decisions, or security operations.
 
@@ -273,4 +273,4 @@ Watch the [Ubuntu Voice walkthrough video](https://www.youtube.com/watch?v=_O3LJ
 
 ## 14. Support
 
-For permission grants, administrator access requests, account or agent approval questions, technical issues, or any other inquiries about the Ubuntu Voice app, users can email `mainanorbert90@gmail.com`. When requesting permission, include the account email used to sign in and briefly explain the access required. Do not include passwords, API keys, or other sensitive credentials in the email.
+For agent approvals, known-place or statistics corrections, technical issues, or other inquiries about the Ubuntu Voice app, users can email `mainanorbert90@gmail.com`. Existing user access is sufficient for the hackathon; request administrator access only for agent approval or when one of the two data areas needs editing. Include the account email used to sign in and briefly explain the approval or correction required. Do not include passwords, API keys, or other sensitive credentials in the email.
