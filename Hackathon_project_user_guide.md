@@ -13,7 +13,7 @@ The system supports:
 - A statistics table and map for monitoring reported locations and incident statuses.
 - Optional email, SMS, and push notifications for urgent conflict alerts.
 - Note: SMS, and push notifications for urgent conflict alerts not configured for now
-- Signed-in features for creating agents, uploading documents, and reviewing monitoring information. Administrator privileges are required for approving agents, managing places, and correcting statistics.
+- Signed-in features for creating agents, uploading documents, reviewing monitoring information, adding or editing places, and correcting statistics. Administrator privileges are required for approving agents and deleting places or statistics.
 
 The system provides information and routing support. It does not replace emergency services, medical care, legal advice, humanitarian verification, or official casualty accounting.
 
@@ -32,7 +32,7 @@ The normal flow is:
 7. The system retrieves relevant excerpts only from that agent’s documents and generates a concise answer.
 8. If trustworthy excerpts are unavailable, the agent should say that it does not have enough trusted information instead of inventing facts.
 
-Users may chat with any approved public agent without logging in. Login is required for creating agents, uploading documents, and using signed-in monitoring functions. Only administrators can approve newly created agents, edit `Known places`, or manage statistics. Users who need these privileges should email `mainanorbert90@gmail` and include their account email.
+Users may chat with any approved public agent without logging in. Login is required for creating agents, uploading documents, and using signed-in monitoring functions. Signed-in users can add or edit `Known places` and correct statistics. Only administrators can approve newly created agents or delete places and statistics.
 
 ## 3. Creating useful agents
 
@@ -142,11 +142,11 @@ Consequences:
 - Several incidents in the same city may appear at the same map point.
 - Map points and statistics are not proof that an incident occurred at those coordinates.
 
-Only administrators can open `Manage known places` to add, edit, deactivate, or correct a place’s name, country, latitude, and longitude. Place changes affect future map matching and display.
+Signed-in users can open `Manage known places` to add or edit a place’s name, country, latitude, and longitude. Only administrators can deactivate a place. Place changes affect future map matching and display.
 
 ## 9. Correcting statistics
 
-Only administrators can edit or delete a statistic row when a classifier result is wrong. Editing allows correction of:
+Signed-in users can edit a statistic row when a classifier result is wrong. Only administrators can delete a statistic row. Editing allows correction of:
 
 - Place.
 - Sanitized description.
@@ -196,7 +196,7 @@ When testing, remember:
 - Statistics count reports, not people, and repeated reports are not automatically deduplicated across separate messages.
 - Agent answers are limited to the selected agent’s uploaded knowledge base.
 - Uploaded documents determine answer quality; missing, outdated, contradictory, or fabricated documents produce poor or unsafe results.
-- Public chat does not require login. Viewing monitoring information and creating agents require authentication; approving agents, correcting statistics, and managing known places require administrator privileges.
+- Public chat does not require login. Viewing monitoring information, creating agents, correcting statistics, and adding or editing known places require authentication; approving agents and deleting statistics or known places require administrator privileges.
 - An agent creator cannot make an agent public without administrator approval.
 - Notification providers and Google Maps require deployment configuration and may be unavailable in local development.
 - The platform should not be used as the sole source for emergency dispatch, official statistics, legal decisions, medical decisions, or security operations.

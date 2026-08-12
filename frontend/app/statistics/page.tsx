@@ -113,7 +113,7 @@ function type_badge_class(type: string): string {
 
 export default function StatisticsPage() {
   const [rows, set_rows] = useState<IncidentStatisticResponse[]>([])
-  const [is_admin, set_is_admin] = useState(false)
+  const [can_delete, set_can_delete] = useState(false)
   const [loading, set_loading] = useState(true)
   const [refreshing, set_refreshing] = useState(false)
   const [error, set_error] = useState<string | null>(null)
@@ -193,9 +193,9 @@ export default function StatisticsPage() {
       .then(async (response) => {
         if (!response.ok) return
         const profile: AuthProfile = await response.json()
-        set_is_admin(profile.is_admin === true)
+        set_can_delete(profile.is_admin === true)
       })
-      .catch(() => set_is_admin(false))
+      .catch(() => set_can_delete(false))
   }, [])
 
   const total_pages = Math.max(1, Math.ceil(total / page_size))
@@ -367,7 +367,7 @@ export default function StatisticsPage() {
             </div>
           </div>
 
-          {is_admin && editing_row && edit_form ? (
+          {editing_row && edit_form ? (
             <form
               onSubmit={save_edit}
               className="border-b border-[#dce4ef] bg-[#F8FAFC] px-5 py-5"
@@ -476,9 +476,7 @@ export default function StatisticsPage() {
                     <th className="px-5 py-3 font-medium">Type</th>
                     <th className="px-5 py-3 font-medium">Total count</th>
                     <th className="px-5 py-3 font-medium">Updated</th>
-                    {is_admin ? (
-                      <th className="px-5 py-3 font-medium">Actions</th>
-                    ) : null}
+                    <th className="px-5 py-3 font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -511,18 +509,18 @@ export default function StatisticsPage() {
                       <td className="px-5 py-4 text-muted-foreground">
                         {format_timestamp(row.updated_at)}
                       </td>
-                      {is_admin ? (
-                        <td className="px-5 py-4">
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={saving || deleting_id === row.id}
-                              onClick={() => begin_edit(row)}
-                              aria-label={`Edit statistic for ${row.place}`}
-                            >
-                              <Pencil className="size-3" /> Edit
-                            </Button>
+                      <td className="px-5 py-4">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={saving || deleting_id === row.id}
+                            onClick={() => begin_edit(row)}
+                            aria-label={`Edit statistic for ${row.place}`}
+                          >
+                            <Pencil className="size-3" /> Edit
+                          </Button>
+                          {can_delete ? (
                             <Button
                               size="sm"
                               variant="destructive"
@@ -537,9 +535,9 @@ export default function StatisticsPage() {
                               )}{" "}
                               Delete
                             </Button>
-                          </div>
-                        </td>
-                      ) : null}
+                          ) : null}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
