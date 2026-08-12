@@ -6,6 +6,7 @@ import pytest
 from fastapi import HTTPException
 from sendgrid.helpers.mail import Mail
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.core.auth import verify_password
@@ -51,6 +52,40 @@ def test_login_with_an_unregistered_email_has_clear_feedback() -> None:
 
     assert error.value.status_code == 401
     assert error.value.detail == "We couldn't find an account with that email address."
+
+
+def test_manual_registration_rejects_an_existing_email_case_insensitively() -> None:
+    """Registration should provide a clear conflict for an existing account."""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        session.add(User(id="existing", email="person@example.org", password_hash="existing-hash"))
+        session.commit()
+
+        with pytest.raises(HTTPException) as error:
+            auth.start_manual_registration(
+                session,
+                email=" PERSON@EXAMPLE.ORG ",
+                password="SecurePassword1!",
+                name="Person Example",
+            )
+
+    assert error.value.status_code == 409
+    assert error.value.detail == "Email is already registered."
+
+
+def test_user_email_is_unique_case_insensitively() -> None:
+    """The ORM schema must reject duplicate email addresses regardless of case."""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        session.add(User(id="first", email="person@example.org"))
+        session.commit()
+        session.add(User(id="second", email="PERSON@example.org"))
+        with pytest.raises(IntegrityError):
+            session.commit()
 
 
 def test_email_verification_uses_configured_sendgrid_sender(monkeypatch) -> None:

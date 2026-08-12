@@ -166,25 +166,23 @@ export default function PlacesPage() {
       description="Browse the places available to incident workflows."
     >
       <div className="flex flex-col gap-6">
-        {is_admin ? (
-          <div>
-            <Button
-              type="button"
-              onClick={() => {
-                if (is_manager_open) close_manager()
-                else set_is_manager_open(true)
-              }}
-              aria-expanded={is_manager_open}
-              aria-controls="place-manager"
-              className="bg-[#2563EB] text-white hover:bg-[#1E3A8A] focus-visible:ring-[#60A5FA]"
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              Manage places
-            </Button>
-          </div>
-        ) : null}
+        <div>
+          <Button
+            type="button"
+            onClick={() => {
+              if (is_manager_open) close_manager()
+              else set_is_manager_open(true)
+            }}
+            aria-expanded={is_manager_open}
+            aria-controls="place-manager"
+            className="bg-[#2563EB] text-white hover:bg-[#1E3A8A] focus-visible:ring-[#60A5FA]"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            Manage places
+          </Button>
+        </div>
 
-        {is_admin && is_manager_open ? (
+        {is_manager_open ? (
           <form
             id="place-manager"
             onSubmit={submit}
@@ -310,7 +308,7 @@ export default function PlacesPage() {
                   <th className="px-5 py-3">Latitude</th>
                   <th className="px-5 py-3">Longitude</th>
                   <th className="px-5 py-3">Status</th>
-                  {is_admin ? <th className="px-5 py-3">Actions</th> : null}
+                  <th className="px-5 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -323,18 +321,17 @@ export default function PlacesPage() {
                     <td className="px-5 py-4">
                       {place.is_active ? "Active" : "Inactive"}
                     </td>
-                    {is_admin ? (
-                      <td className="px-5 py-4">
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => edit_place(place)}
-                          >
-                            <Pencil className="size-3" aria-hidden="true" />
-                            Edit
-                          </Button>
-                          {place.is_active ? (
+                    <td className="px-5 py-4">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => edit_place(place)}
+                        >
+                          <Pencil className="size-3" aria-hidden="true" />
+                          Edit
+                        </Button>
+                        {is_admin && place.is_active ? (
                             <Button
                               size="sm"
                               variant="destructive"
@@ -343,16 +340,15 @@ export default function PlacesPage() {
                               <Trash2 className="size-3" aria-hidden="true" />
                               Delete
                             </Button>
-                          ) : null}
-                        </div>
-                      </td>
-                    ) : null}
+                        ) : null}
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {visible_places.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={is_admin ? 6 : 5}
+                      colSpan={6}
                       className="px-5 py-8 text-center text-[#607694]"
                     >
                       No places match your filters.

@@ -129,7 +129,14 @@ def confirm_email_verification(session: Session, *, token: str) -> User:
             user.name = pending.name
 
     session.delete(pending)
-    session.flush()
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already registered.",
+        ) from exc
     return user
 
 
