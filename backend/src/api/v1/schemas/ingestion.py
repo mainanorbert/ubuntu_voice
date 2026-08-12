@@ -133,6 +133,16 @@ class CompanyResponse(BaseModel):
     created_at: datetime
 
 
+class AdminCompanyPageResponse(BaseModel):
+    """A searchable, paginated list of agents for administrators."""
+
+    agents: list[CompanyResponse]
+    total: int = Field(..., ge=0)
+    page: int = Field(..., ge=1)
+    page_size: int = Field(..., ge=1)
+    total_pages: int = Field(..., ge=0)
+
+
 class AgentApprovalRequest(BaseModel):
     """Admin action that makes an agent available or unavailable for chat."""
 

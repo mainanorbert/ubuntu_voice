@@ -76,6 +76,7 @@ class Company(Base):
     """Tenant boundary identified by a globally unique name and contact details."""
 
     __tablename__ = "companies"
+    __table_args__ = (Index("ix_companies_created_at_id", "created_at", "id"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
