@@ -81,3 +81,28 @@ def test_email_verification_uses_configured_sendgrid_sender(monkeypatch) -> None
     assert len(sent_messages) == 1
     assert sent_messages[0].from_email.email == "verified-sender@example.org"
     assert sent_messages[0].personalizations[0].tos[0]["email"] == "person@example.org"
+
+
+def test_email_verification_converts_provider_error_to_delivery_error(monkeypatch) -> None:
+    """A rejected SendGrid request is safe for the route to present to users."""
+
+    class FakeSendGridClient:
+        def __init__(self, api_key: str) -> None:
+            pass
+
+        def send(self, message: Mail) -> None:
+            raise PermissionError("credential rejected")
+
+    monkeypatch.setattr(auth, "SendGridAPIClient", FakeSendGridClient)
+
+    with pytest.raises(RuntimeError, match="Email-verification delivery failed") as error:
+        asyncio.run(
+            auth.send_email_verification_email(
+                sendgrid_api_key="rejected-key",
+                sender_email="verified-sender@example.org",
+                recipient_email="person@example.org",
+                verification_url="https://app.example.org/confirm-email?token=private-token",
+            )
+        )
+
+    assert isinstance(error.value.__cause__, PermissionError)

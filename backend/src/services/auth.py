@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from html import escape
 import hashlib
+import logging
 import secrets
 
 import httpx
@@ -25,6 +26,8 @@ from src.core.auth import (
 )
 from src.core.config import Settings
 from src.models import PendingEmailVerification, User
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -176,7 +179,11 @@ async def send_password_reset_email(
     def send_message():
         return SendGridAPIClient(sendgrid_api_key).send(message)
 
-    response = await asyncio.to_thread(send_message)
+    try:
+        response = await asyncio.to_thread(send_message)
+    except Exception as exc:
+        logger.warning("Password-reset email delivery failed: %s", type(exc).__name__)
+        raise RuntimeError("Password-reset email delivery failed.") from exc
     if response.status_code >= 400:
         raise RuntimeError(f"SendGrid email delivery failed with status {response.status_code}.")
 
@@ -203,7 +210,11 @@ async def send_email_verification_email(
     def send_message():
         return SendGridAPIClient(sendgrid_api_key).send(message)
 
-    response = await asyncio.to_thread(send_message)
+    try:
+        response = await asyncio.to_thread(send_message)
+    except Exception as exc:
+        logger.warning("Email-verification delivery failed: %s", type(exc).__name__)
+        raise RuntimeError("Email-verification delivery failed.") from exc
     if response.status_code >= 400:
         raise RuntimeError(f"SendGrid email delivery failed with status {response.status_code}.")
 
