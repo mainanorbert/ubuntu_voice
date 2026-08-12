@@ -2,13 +2,15 @@
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.api.v1.schemas.ingestion import (
     CompanyCreateRequest,
     AgentApprovalRequest,
+    AdminCompanyPageResponse,
     CompanyResponse,
     CompanyUpdateRequest,
     CompanyWithDocumentsResponse,
@@ -148,17 +150,38 @@ async def get_public_companies(
     return [build_company_response(c) for c in companies]
 
 
-@router.get("/admin", response_model=list[CompanyResponse])
+@router.get("/admin", response_model=AdminCompanyPageResponse)
 async def get_admin_companies(
     session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
-) -> list[CompanyResponse]:
-    """List every agent for configured administrators only."""
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    search: Annotated[str | None, Query(max_length=255)] = None,
+) -> AdminCompanyPageResponse:
+    """List searchable agent pages for configured administrators only."""
     identity = get_authenticated_user_identity(session_state)
     require_admin(identity, settings)
-    companies = db_session.query(Company).order_by(Company.created_at.desc()).all()
-    return [build_company_response(c) for c in companies]
+    query = db_session.query(Company)
+    normalized_search = search.strip() if search else ""
+    if normalized_search:
+        pattern = f"%{normalized_search}%"
+        query = query.filter(or_(Company.name.ilike(pattern), Company.email.ilike(pattern)))
+
+    total = query.count()
+    companies = (
+        query.order_by(Company.created_at.desc(), Company.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    return AdminCompanyPageResponse(
+        agents=[build_company_response(company) for company in companies],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=(total + page_size - 1) // page_size,
+    )
 
 
 @router.patch("/{company_id}/approval", response_model=CompanyResponse)
