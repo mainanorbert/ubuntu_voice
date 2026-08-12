@@ -6,6 +6,11 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from src.api.v1.schemas.text_validation import reject_control_characters
+
+
+COMPANY_NAME_MAX_LENGTH = 255
+
 
 def normalize_phone_number(value: str) -> str:
     """Normalize a readable phone number and reject invalid lengths."""
@@ -30,7 +35,7 @@ class RegisteredUserResponse(BaseModel):
 class CompanyCreateRequest(BaseModel):
     """Payload for creating a new tenant company."""
 
-    name: str = Field(..., min_length=1, examples=["Acme Support"])
+    name: str = Field(..., min_length=1, max_length=COMPANY_NAME_MAX_LENGTH, examples=["Acme Support"])
     email: EmailStr = Field(..., examples=["support@acme.example"])
     phone: str | None = Field(default=None, min_length=7, max_length=20, examples=["+254712345678"])
     description: str | None = Field(
@@ -47,6 +52,15 @@ class CompanyCreateRequest(BaseModel):
             return None
         return normalize_phone_number(value)
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        """Trim agent names and reject unsafe control characters."""
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Agent name cannot be empty.")
+        return reject_control_characters(stripped)
+
     @field_validator("description")
     @classmethod
     def validate_description(cls, value: str | None) -> str | None:
@@ -60,7 +74,12 @@ class CompanyCreateRequest(BaseModel):
 class CompanyUpdateRequest(BaseModel):
     """Partial payload for editing an existing agent profile."""
 
-    name: str | None = Field(default=None, min_length=1, examples=["Sahel Peace Mediator"])
+    name: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=COMPANY_NAME_MAX_LENGTH,
+        examples=["Sahel Peace Mediator"],
+    )
     email: EmailStr | None = Field(default=None, examples=["mediator@example.org"])
     phone: str | None = Field(default=None, min_length=7, max_length=20, examples=["+254712345678"])
     description: str | None = Field(
@@ -78,7 +97,7 @@ class CompanyUpdateRequest(BaseModel):
         stripped = value.strip()
         if not stripped:
             raise ValueError("Agent name cannot be empty.")
-        return stripped
+        return reject_control_characters(stripped)
 
     @field_validator("phone")
     @classmethod

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from src.api.v1.schemas.monitoring import IncidentStatisticUpdate, KnownPlaceInput
 from src.core.database import Base, create_database_engine, create_session_factory
 from src.models import Company, IncidentStatistic, KnownPlace, User
 from src.services.incident_statistics import (
@@ -16,6 +17,30 @@ from src.services.incident_statistics import (
     sanitize_incident_description,
     upsert_incident_statistics,
 )
+
+
+@pytest.mark.parametrize(
+    ("model", "payload"),
+    [
+        (
+            KnownPlaceInput,
+            {"name": "Goma\x00", "latitude": -1.679, "longitude": 29.222},
+        ),
+        (
+            IncidentStatisticUpdate,
+            {
+                "place": "Goma\x85",
+                "description": "Reported incident.",
+                "type": "Casualties",
+                "total_count": 1,
+            },
+        ),
+    ],
+)
+def test_place_inputs_reject_control_characters(model, payload) -> None:
+    """Place names must be safe to persist and render in the dashboard."""
+    with pytest.raises(ValueError, match="control characters"):
+        model(**payload)
 
 
 def test_parse_incident_classifier_json_accepts_valid_output() -> None:

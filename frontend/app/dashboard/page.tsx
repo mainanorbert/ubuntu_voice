@@ -201,11 +201,13 @@ export default function DashboardPage() {
             {user?.is_admin ? (
               <DashboardLink href="/usage" label="Usage" icon={Gauge} />
             ) : null}
-            <DashboardLink
-              href="/guardrails"
-              label="Guardrails"
-              icon={ShieldAlert}
-            />
+            {user?.is_admin ? (
+              <DashboardLink
+                href="/guardrails"
+                label="Guardrails"
+                icon={ShieldAlert}
+              />
+            ) : null}
             <DashboardLink
               href="/evaluations"
               label="Evaluations"

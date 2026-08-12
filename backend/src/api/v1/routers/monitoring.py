@@ -199,17 +199,21 @@ async def delete_incident_statistic(
 @router.get("/guardrail-events", response_model=list[GuardrailEventResponse])
 async def list_guardrail_events(
     session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> list[GuardrailEventResponse]:
     """Return the most recent guardrail audit rows in reverse chronological order.
 
-    The signed-in user is upserted into the local users table (matching the
-    other routes) so dashboard access works for newly authenticated operators.
+    Only users whose email is configured in ``ADMIN_EMAILS`` may view these
+    sensitive audit records. The signed-in user is upserted into the local
+    users table (matching the other routes) so dashboard access works for
+    newly authenticated operators.
     Rows are returned newest-first; ``limit`` caps the page size to keep the
     payload small for the dashboard.
     """
     identity = get_authenticated_user_identity(session_state)
+    require_admin(identity, settings)
     upsert_user(db_session, user_id=identity.user_id, email=identity.email)
     db_session.commit()
 

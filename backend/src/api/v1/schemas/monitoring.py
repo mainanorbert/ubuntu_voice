@@ -3,7 +3,9 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from src.api.v1.schemas.text_validation import reject_control_characters
 
 
 class GuardrailEventResponse(BaseModel):
@@ -44,6 +46,11 @@ class IncidentStatisticUpdate(BaseModel):
     description: str = Field(..., min_length=1, max_length=500)
     type: Literal["Rights Violations", "Displacements", "Casualties", "Severe Hunger"]
     total_count: int = Field(..., ge=1, le=1_000_000_000)
+
+    @field_validator("place")
+    @classmethod
+    def validate_place_characters(cls, value: str) -> str:
+        return reject_control_characters(value)
 
 
 class IncidentStatisticsSummary(BaseModel):
@@ -88,3 +95,8 @@ class KnownPlaceInput(BaseModel):
     country: str | None = Field(default=None, max_length=100)
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name_characters(cls, value: str) -> str:
+        return reject_control_characters(value)
