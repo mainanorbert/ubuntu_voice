@@ -31,7 +31,7 @@ The system supports:
 - A statistics table and map for monitoring reported locations and incident statuses.
 - Optional email, SMS, and push notifications for urgent conflict alerts.
 - Note: SMS, and push notifications for urgent conflict alerts not configured for now
-- Signed-in features for creating agents, uploading documents, and reviewing monitoring information. Administrator privileges are needed only for approving agents, editing known places, and correcting statistics.
+- Signed-in features for creating agents, uploading documents, reviewing monitoring information, adding or editing known places, and correcting statistics. Administrator privileges are needed for agent approvals and destructive monitoring actions.
 
 The system provides information and routing support. It does not replace emergency services, medical care, legal advice, humanitarian verification, or official casualty accounting.
 
@@ -52,7 +52,7 @@ The normal flow is:
 9. The system retrieves relevant excerpts only from that agent’s documents and generates a concise answer.
 10. If trustworthy excerpts are unavailable, the agent should say that it does not have enough trusted information instead of inventing facts.
 
-Users may chat with any approved public agent without logging in. Login is required for creating agents, uploading documents, and using signed-in monitoring functions. Existing user access is sufficient for the hackathon. Request administrator access only when an agent needs approval, a known place must be added, edited, deactivated, or corrected, or a statistic must be corrected or deleted.
+Users may chat with any approved public agent without logging in. Login is required for creating agents, uploading documents, and using signed-in monitoring functions. Any signed-in user can add or edit known places and correct statistics. Request administrator access only when an agent needs approval or a known place or statistic must be deleted.
 
 ## 3. Creating useful agents
 
@@ -180,11 +180,11 @@ Consequences:
 - Several incidents in the same city may appear at the same map point.
 - Map points and statistics are not proof that an incident occurred at those coordinates.
 
-Administrator access is required only to open `Manage known places` and add, edit, deactivate, or correct a place’s name, country, latitude, and longitude. Place changes affect future map matching and display. Existing user access is enough for the rest of the hackathon workflow.
+Any signed-in user can open `Manage known places` and add or edit a place’s name, country, latitude, and longitude. Deactivating a place remains administrator-only. Place changes affect future map matching and display.
 
 ## 9. Correcting statistics
 
-Administrator access is required only to edit or delete a statistic row when a classifier result is wrong. Existing user access is enough for viewing statistics and completing the rest of the hackathon workflow. If a statistic needs correction, request the appropriate administrator access by emailing `mainanorbert90@gmail.com`. Include the account email used to sign in and explain which statistic requires correction and why. Do not attempt to modify statistics without the required permission.
+Any signed-in user can edit a statistic row when a classifier result is wrong. Deleting a statistic remains administrator-only. If a statistic needs deletion, request the appropriate administrator access by emailing `mainanorbert90@gmail.com`. Include the account email used to sign in and explain which statistic requires deletion and why.
 
 After permission is granted, editing allows correction of:
 
@@ -236,7 +236,7 @@ When testing, remember:
 - Statistics count reports, not people, and repeated reports are not automatically deduplicated across separate messages.
 - Agent answers are limited to the selected agent’s uploaded knowledge base.
 - Uploaded documents determine answer quality; missing, outdated, contradictory, or fabricated documents produce poor or unsafe results.
-- Public chat does not require login. Viewing statistics and creating agents require authentication; administrator access is needed only for approving agents, correcting statistics, and managing known places. Existing user access is sufficient for the hackathon.
+- Public chat does not require login. Viewing statistics and creating agents require authentication; any signed-in user can correct statistics and manage known places, while administrator access is required for agent approvals and deletions.
 - An agent creator cannot make an agent public until it has been approved.
 - Notification providers and Google Maps require deployment configuration and may be unavailable in local development.
 - The platform should not be used as the sole source for emergency dispatch, official statistics, legal decisions, medical decisions, or security operations.
@@ -263,4 +263,4 @@ Watch the [Ubuntu Voice walkthrough video](https://www.youtube.com/watch?v=_O3LJ
 
 ## 14. Support
 
-For agent approvals, known-place or statistics corrections, technical issues, or other inquiries about the Ubuntu Voice app, users can email `mainanorbert90@gmail.com`. Existing user access is sufficient for the hackathon; request administrator access only for agent approval or when one of the two data areas needs editing. Include the account email used to sign in and briefly explain the approval or correction required. Do not include passwords, API keys, or other sensitive credentials in the email.
+For agent approvals, known-place or statistics deletions, technical issues, or other inquiries about the Ubuntu Voice app, users can email `mainanorbert90@gmail.com`. Existing user access is sufficient for the hackathon; request administrator access only for agent approval or deletion of one of the two data areas. Include the account email used to sign in and briefly explain the approval or deletion required. Do not include passwords, API keys, or other sensitive credentials in the email.

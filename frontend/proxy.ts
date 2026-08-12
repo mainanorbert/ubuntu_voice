@@ -13,6 +13,7 @@ const protected_prefixes = [
   "/guardrails",
   "/evaluations",
   "/statistics",
+  "/places",
 ]
 const admin_only_prefixes = ["/usage", "/guardrails"]
 

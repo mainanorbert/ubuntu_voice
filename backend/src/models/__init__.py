@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -37,6 +38,14 @@ class User(Base):
     """Locally stored user identity for manual and Google authentication."""
 
     __tablename__ = "users"
+    __table_args__ = (
+        Index(
+            "uq_users_email_lower",
+            text("lower(email)"),
+            unique=True,
+            postgresql_where=text("email IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     email: Mapped[str | None] = mapped_column(Text, nullable=True)

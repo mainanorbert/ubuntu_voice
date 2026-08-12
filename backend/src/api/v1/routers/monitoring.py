@@ -36,12 +36,10 @@ async def list_known_places(
 @router.post("/known-places", response_model=KnownPlaceResponse, status_code=201)
 async def create_known_place(
     payload: KnownPlaceInput,
-    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
-    settings: Annotated[Settings, Depends(get_settings)],
+    _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> KnownPlaceResponse:
-    """Create a known place for configured administrators only."""
-    require_admin(get_authenticated_user_identity(session_state), settings)
+    """Create a known place for any authenticated user."""
     place = KnownPlace(
         name=payload.name.strip(),
         country=payload.country.strip() if payload.country and payload.country.strip() else None,
@@ -62,12 +60,10 @@ async def create_known_place(
 async def update_known_place(
     place_id: int,
     payload: KnownPlaceInput,
-    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
-    settings: Annotated[Settings, Depends(get_settings)],
+    _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> KnownPlaceResponse:
-    """Update a known place for configured administrators only."""
-    require_admin(get_authenticated_user_identity(session_state), settings)
+    """Update a known place for any authenticated user."""
     place = db_session.get(KnownPlace, place_id)
     if place is None:
         raise HTTPException(status_code=404, detail="Place not found.")
@@ -141,11 +137,9 @@ async def update_incident_statistic(
     statistic_id: str,
     payload: IncidentStatisticUpdate,
     _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
-    settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> IncidentStatisticResponse:
-    """Allow configured administrators to correct an aggregated incident row."""
-    require_admin(get_authenticated_user_identity(_session_state), settings)
+    """Allow any authenticated user to correct an aggregated incident row."""
     row = db_session.get(IncidentStatistic, statistic_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Statistic not found.")

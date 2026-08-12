@@ -367,7 +367,7 @@ export default function StatisticsPage() {
             </div>
           </div>
 
-          {is_admin && editing_row && edit_form ? (
+          {editing_row && edit_form ? (
             <form
               onSubmit={save_edit}
               className="border-b border-[#dce4ef] bg-[#F8FAFC] px-5 py-5"
@@ -476,9 +476,7 @@ export default function StatisticsPage() {
                     <th className="px-5 py-3 font-medium">Type</th>
                     <th className="px-5 py-3 font-medium">Total count</th>
                     <th className="px-5 py-3 font-medium">Updated</th>
-                    {is_admin ? (
-                      <th className="px-5 py-3 font-medium">Actions</th>
-                    ) : null}
+                    <th className="px-5 py-3 font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -511,10 +509,9 @@ export default function StatisticsPage() {
                       <td className="px-5 py-4 text-muted-foreground">
                         {format_timestamp(row.updated_at)}
                       </td>
-                      {is_admin ? (
-                        <td className="px-5 py-4">
-                          <div className="flex gap-2">
-                            <Button
+                      <td className="px-5 py-4">
+                        <div className="flex gap-2">
+                          <Button
                               size="sm"
                               variant="outline"
                               disabled={saving || deleting_id === row.id}
@@ -522,7 +519,8 @@ export default function StatisticsPage() {
                               aria-label={`Edit statistic for ${row.place}`}
                             >
                               <Pencil className="size-3" /> Edit
-                            </Button>
+                          </Button>
+                          {is_admin ? (
                             <Button
                               size="sm"
                               variant="destructive"
@@ -537,9 +535,9 @@ export default function StatisticsPage() {
                               )}{" "}
                               Delete
                             </Button>
-                          </div>
-                        </td>
-                      ) : null}
+                          ) : null}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

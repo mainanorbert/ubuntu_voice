@@ -217,7 +217,7 @@ def test_sanitize_incident_description_removes_contact_details() -> None:
 
 
 def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agent(tmp_path, monkeypatch) -> None:
-    """Signed-in users can view data, while only ADMIN_EMAILS can mutate it."""
+    """Authenticated users can manage places and correct statistics; admins delete."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
     monkeypatch.setenv("EIVEN_SERVICE_URL", f"sqlite:///{tmp_path / 'incident_stats.db'}")
     monkeypatch.setenv("ADMIN_EMAILS", "owner@example.org")
@@ -347,8 +347,11 @@ def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agen
             # Read access, including filtering, remains available to every signed-in user.
             assert client.get("/api/v1/monitoring/known-places?include_inactive=true").status_code == 200
             assert client.get("/api/v1/monitoring/incident-statistics?agent_id=company_1").status_code == 200
-            assert client.post("/api/v1/monitoring/known-places", json=place_payload).status_code == 403
-            assert client.put("/api/v1/monitoring/known-places/1", json=place_payload).status_code == 403
+            assert client.post("/api/v1/monitoring/known-places", json=place_payload).status_code == 201
+            assert client.put(
+                "/api/v1/monitoring/known-places/1",
+                json={**place_payload, "name": "Goma City"},
+            ).status_code == 200
             assert client.delete("/api/v1/monitoring/known-places/1").status_code == 403
             assert client.put(
                 "/api/v1/monitoring/incident-statistics/stat_1",
@@ -358,7 +361,7 @@ def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agen
                     "type": "Casualties",
                     "total_count": 4,
                 },
-            ).status_code == 403
+            ).status_code == 200
             assert client.delete("/api/v1/monitoring/incident-statistics/stat_1").status_code == 403
     finally:
         app.dependency_overrides.clear()
