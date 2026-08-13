@@ -195,7 +195,7 @@ class Settings(BaseSettings):
     frontend_base_url: str = Field(
         default="http://localhost:3000",
         validation_alias=AliasChoices("FRONTEND_BASE_URL"),
-        description="Public frontend URL used in password-reset emails.",
+        description="Public frontend URL used in account confirmation and password-reset emails.",
     )
     google_client_id: str | None = Field(
         default=None,
@@ -247,7 +247,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_auth_session_secret(self) -> "Settings":
-        """Prevent a publicly known or weak signing key from reaching production."""
+        """Prevent unsafe authentication settings from reaching production."""
         if self.environment.strip().lower() != "production":
             return self
         if self.auth_session_secret == DEFAULT_AUTH_SESSION_SECRET:
@@ -258,7 +258,21 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"AUTH_SESSION_SECRET must be at least {MIN_AUTH_SESSION_SECRET_LENGTH} characters in production."
             )
+        if self.frontend_base_url.startswith("http://localhost") or self.frontend_base_url.startswith(
+            "http://127.0.0.1"
+        ):
+            raise ValueError(
+                "FRONTEND_BASE_URL must be set to the public frontend URL in production."
+            )
         return self
+
+    @field_validator("frontend_base_url", mode="before")
+    @classmethod
+    def normalize_frontend_base_url(cls, v: str) -> str:
+        """Normalize the URL used to construct links sent in account emails."""
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("FRONTEND_BASE_URL must be a non-empty URL.")
+        return v.strip().rstrip("/")
 
     @field_validator("database_url", mode="before")
     @classmethod

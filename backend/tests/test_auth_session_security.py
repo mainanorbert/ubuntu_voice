@@ -39,6 +39,16 @@ def test_production_rejects_a_short_session_secret(monkeypatch: pytest.MonkeyPat
         )
 
 
+def test_production_rejects_the_local_frontend_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    with pytest.raises(ValidationError, match="FRONTEND_BASE_URL must be set to the public frontend URL"):
+        build_settings(
+            monkeypatch,
+            ENVIRONMENT="production",
+            AUTH_SESSION_SECRET="a-secure-rotated-session-secret-with-adequate-length",
+            FRONTEND_BASE_URL="http://localhost:3000",
+        )
+
+
 def test_token_signed_with_the_old_default_secret_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     old_secret_settings = build_settings(monkeypatch, AUTH_SESSION_SECRET=DEFAULT_AUTH_SESSION_SECRET)
     forged_token = create_session_token(
