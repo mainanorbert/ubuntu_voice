@@ -206,6 +206,14 @@ cp backend/.env.example backend/.env
 
 Then open `backend/.env`, replace the placeholder values with your real credentials and service URLs, and keep that file out of version control. The example file lives at `backend/.env.example`.
 
+For deployed environments, set `FRONTEND_BASE_URL` on the **backend** to the public frontend origin, without a trailing path. Both registration-confirmation and password-reset emails use this value to build their links:
+
+```text
+FRONTEND_BASE_URL=https://your-frontend.example.com
+```
+
+Restart or redeploy the backend after changing it. Production startup rejects a localhost value so email links cannot accidentally point users to the server's local machine.
+
 ### Frontend
 
 From the project root:
