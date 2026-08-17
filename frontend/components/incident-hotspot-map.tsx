@@ -15,10 +15,15 @@ export type IncidentStatistic = {
   place: string
   type: string
   total_count: number
+  latitude?: number | null
+  longitude?: number | null
+  known_place_id?: number | null
+  location_key?: string
   updated_at: string
 }
 
 export type KnownPlace = {
+  id?: number
   name: string
   latitude: number
   longitude: number
@@ -68,18 +73,27 @@ function create_hotspots(
 ): HotspotMarker[] {
   const totals = new Map<
     string,
-    { place: string; counts: Record<string, number>; updated_at: string }
+    { place: string; counts: Record<string, number>; updated_at: string; position: google.maps.LatLngLiteral }
   >()
   for (const row of statistics) {
     if (
       !INCIDENT_TYPES.some((incident_type) => incident_type.name === row.type)
     )
       continue
-    const key = place_key(row.place)
+    const known_place = known_places.find(
+      (item) => item.id === row.known_place_id || place_key(item.name) === place_key(row.place)
+    )
+    const has_coordinates = typeof row.latitude === "number" && typeof row.longitude === "number"
+    const position = has_coordinates
+      ? { lat: row.latitude as number, lng: row.longitude as number }
+      : known_place ? { lat: known_place.latitude, lng: known_place.longitude } : null
+    if (!position) continue
+    const key = row.location_key || (known_place ? `known-place:${known_place.id ?? place_key(known_place.name)}` : place_key(row.place))
     const entry = totals.get(key) ?? {
       place: row.place.trim(),
       counts: {},
       updated_at: row.updated_at,
+      position,
     }
     entry.counts[row.type] =
       (entry.counts[row.type] ?? 0) + Math.max(0, Number(row.total_count) || 0)
@@ -90,14 +104,7 @@ function create_hotspots(
     totals.set(key, entry)
   }
 
-  const rendered_places = new Set<string>()
-  return known_places.flatMap((known_place) => {
-    const key = place_key(known_place.name)
-    if (rendered_places.has(key)) return []
-    rendered_places.add(key)
-    const entry = totals.get(key)
-    if (!entry) return []
-
+  return [...totals.entries()].flatMap(([key, entry]) => {
     const reported_types = INCIDENT_TYPES.filter(
       (incident_type) => (entry.counts[incident_type.name] ?? 0) > 0
     )
@@ -107,11 +114,11 @@ function create_hotspots(
       const separation = cluster_radius(reported_types.length)
       return {
         id: `${key}-${incident_type.name}`,
-        place: known_place.name,
+        place: entry.place,
         type: incident_type.name,
         count,
         updated_at: entry.updated_at,
-        position: { lat: known_place.latitude, lng: known_place.longitude },
+        position: entry.position,
         color: incident_type.color,
         offset: {
           x: Math.cos(angle) * separation,

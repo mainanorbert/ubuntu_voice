@@ -113,7 +113,7 @@ function type_badge_class(type: string): string {
 
 export default function StatisticsPage() {
   const [rows, set_rows] = useState<IncidentStatisticResponse[]>([])
-  const [can_delete, set_can_delete] = useState(false)
+  const [can_manage, set_can_manage] = useState(false)
   const [loading, set_loading] = useState(true)
   const [refreshing, set_refreshing] = useState(false)
   const [error, set_error] = useState<string | null>(null)
@@ -193,9 +193,9 @@ export default function StatisticsPage() {
       .then(async (response) => {
         if (!response.ok) return
         const profile: AuthProfile = await response.json()
-        set_can_delete(profile.is_admin === true)
+        set_can_manage(profile.is_admin === true)
       })
-      .catch(() => set_can_delete(false))
+      .catch(() => set_can_manage(false))
   }, [])
 
   const total_pages = Math.max(1, Math.ceil(total / page_size))
@@ -511,16 +511,18 @@ export default function StatisticsPage() {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={saving || deleting_id === row.id}
-                            onClick={() => begin_edit(row)}
-                            aria-label={`Edit statistic for ${row.place}`}
-                          >
-                            <Pencil className="size-3" /> Edit
-                          </Button>
-                          {can_delete ? (
+                          {can_manage ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={saving || deleting_id === row.id}
+                              onClick={() => begin_edit(row)}
+                              aria-label={`Edit statistic for ${row.place}`}
+                            >
+                              <Pencil className="size-3" /> Edit
+                            </Button>
+                          ) : null}
+                          {can_manage ? (
                             <Button
                               size="sm"
                               variant="destructive"

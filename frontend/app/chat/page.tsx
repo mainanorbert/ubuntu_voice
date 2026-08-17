@@ -9,6 +9,7 @@ import {
   Globe2,
   Loader2,
   Megaphone,
+  MapPin,
   Mic,
   MicOff,
   SendHorizontal,
@@ -34,6 +35,14 @@ type ChatHistoryMessage = {
   role: ChatRole
   content: string
 }
+
+type ReportLocation = {
+  latitude: number
+  longitude: number
+  accuracy_m: number
+}
+
+type LocationStatus = "requesting" | "available" | "unavailable" | "denied"
 
 type CompanyResponse = {
   id: string
@@ -350,6 +359,7 @@ export default function ChatPage() {
   const [live_transcript, set_live_transcript] = useState("")
   const [selected_language, set_selected_language] =
     useState<ChatLanguage>("English")
+  const [location_status, set_location_status] = useState<LocationStatus>("requesting")
 
   const chat_scroll_ref = useRef<HTMLDivElement | null>(null)
   const list_end_ref = useRef<HTMLDivElement | null>(null)
@@ -364,6 +374,7 @@ export default function ChatPage() {
   const voice_mode_enabled_ref = useRef(false)
   const selected_company_id_ref = useRef<string | null>(null)
   const selected_language_ref = useRef<ChatLanguage>("English")
+  const report_location_ref = useRef<ReportLocation | null>(null)
   const manual_stop_ref = useRef(false)
   const handle_voice_transcript_ref = useRef<(text: string) => void>(() => {})
   const start_listening_ref = useRef<() => void>(() => {})
@@ -379,8 +390,6 @@ export default function ChatPage() {
   useEffect(() => {
     resize_chat_input()
   }, [draft, resize_chat_input])
-
-  const selected_company = companies.find((c) => c.id === selected_company_id)
 
   const scroll_to_bottom = useCallback(() => {
     const chat_scroll = chat_scroll_ref.current
@@ -573,6 +582,7 @@ export default function ChatPage() {
             message: text,
             language: selected_language_ref.current,
             history,
+            ...(report_location_ref.current ? { location: report_location_ref.current } : {}),
           }),
         })
 
@@ -860,6 +870,36 @@ export default function ChatPage() {
       .catch(() => set_is_signed_in(false))
   }, [])
 
+  const request_report_location = useCallback(() => {
+    if (!navigator.geolocation) {
+      set_location_status("unavailable")
+      return
+    }
+    set_location_status("requesting")
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        report_location_ref.current = {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          accuracy_m: coords.accuracy,
+        }
+        set_location_status("available")
+      },
+      (position_error) => {
+        report_location_ref.current = null
+        set_location_status(
+          position_error.code === position_error.PERMISSION_DENIED ? "denied" : "unavailable"
+        )
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 }
+    )
+  }, [])
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(request_report_location)
+    return () => window.cancelAnimationFrame(frame)
+  }, [request_report_location])
+
   useEffect(() => {
     pending_ref.current = pending
   }, [pending])
@@ -1114,7 +1154,35 @@ export default function ChatPage() {
                   )}
                   Voice {voice_state_label}
                 </span>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+                    location_status === "available"
+                      ? "bg-[#e8f1ff] text-[#1E3A8A]"
+                      : "border border-[#dce4ef] bg-white text-[#607694]"
+                  )}
+                >
+                  <MapPin className="size-3.5" aria-hidden />
+                  {location_status === "available" ? "Report location ready" : "Location optional"}
+                </span>
               </div>
+
+              <p className="mt-2 text-sm text-[#607694]">
+                {location_status === "requesting"
+                  ? "Requesting your location to place incident reports accurately on the map."
+                  : location_status === "available"
+                    ? "Your approximate location will be used only when an incident statistic is recorded."
+                    : "Location is unavailable. Reports will use the named known place when one is available."}
+                {location_status !== "available" && location_status !== "requesting" ? (
+                  <button
+                    type="button"
+                    onClick={request_report_location}
+                    className="ml-2 font-medium text-[#2563EB] underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                  >
+                    Try again
+                  </button>
+                ) : null}
+              </p>
 
               {page_loading ? (
                 <p className="mt-1 inline-flex items-center gap-2 text-sm text-[#607694]">

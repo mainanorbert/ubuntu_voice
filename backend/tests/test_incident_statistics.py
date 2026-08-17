@@ -12,6 +12,7 @@ from src.core.database import Base, create_database_engine, create_session_facto
 from src.models import Company, IncidentStatistic, KnownPlace, User
 from src.services.incident_statistics import (
     IncidentClassifierOutput,
+    IncidentLocation,
     IncidentStatisticRecord,
     parse_incident_classifier_json,
     sanitize_incident_description,
@@ -142,6 +143,95 @@ def test_multi_record_upsert_creates_multiple_rows_and_increments_by_report() ->
         assert hunger_row.total_count == 1
 
 
+def test_gps_location_is_rounded_and_used_as_the_aggregation_key() -> None:
+    """Nearby browser positions aggregate without retaining raw GPS precision."""
+    engine = create_database_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    factory = create_session_factory(engine)
+
+    with factory() as session:
+        output = IncidentClassifierOutput(
+            should_record=True,
+            records=[
+                IncidentStatisticRecord(
+                    place="Goma",
+                    description="Casualties reported.",
+                    type="Casualties",
+                )
+            ],
+        )
+        upsert_incident_statistics(
+            session,
+            company_id="company_1",
+            classifier_output=output,
+            location=IncidentLocation(latitude=-1.67861, longitude=29.22161, accuracy_m=24.4),
+        )
+        upsert_incident_statistics(
+            session,
+            company_id="company_1",
+            classifier_output=output,
+            location=IncidentLocation(latitude=-1.67859, longitude=29.22159, accuracy_m=17),
+        )
+
+        row = session.query(IncidentStatistic).one()
+        assert row.location_source == "gps"
+        assert str(row.latitude) == "-1.679000"
+        assert str(row.longitude) == "29.222000"
+        assert row.location_key == "gps:-1.679:29.222"
+        assert row.total_count == 2
+
+
+def test_gps_hotspot_does_not_use_a_text_place_as_its_location() -> None:
+    """Location aggregation keeps the GPS grid authoritative."""
+    engine = create_database_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    factory = create_session_factory(engine)
+    location = IncidentLocation(latitude=-1.1562, longitude=36.9419, accuracy_m=20)
+
+    with factory() as session:
+        for place in ("Ruiru", "Garissa"):
+            upsert_incident_statistics(
+                session,
+                company_id="company_1",
+                classifier_output=IncidentClassifierOutput(
+                    should_record=True,
+                    records=[
+                        IncidentStatisticRecord(
+                            place=place,
+                            description="Incident report.",
+                            type="Casualties",
+                        )
+                    ],
+                ),
+                location=location,
+            )
+        row = session.query(IncidentStatistic).one()
+        assert row.place == "Garissa"
+        assert row.normalized_place == ""
+
+
+def test_gps_location_records_an_incident_without_a_named_place() -> None:
+    """A location-enabled report remains recordable when no place was mentioned."""
+    engine = create_database_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    factory = create_session_factory(engine)
+
+    with factory() as session:
+        upsert_incident_statistics(
+            session,
+            company_id="company_1",
+            classifier_output=IncidentClassifierOutput(
+                should_record=True,
+                records=[IncidentStatisticRecord(place=None, description="People were displaced.", type="Displacements")],
+            ),
+            location=IncidentLocation(latitude=-1.1562, longitude=36.9419, accuracy_m=20),
+        )
+        row = session.query(IncidentStatistic).one()
+        assert row.place == "Approximate current location"
+        assert row.normalized_place == ""
+        assert row.location_source == "gps"
+
+
 def test_upsert_retries_as_increment_when_concurrent_insert_wins(tmp_path, monkeypatch) -> None:
     """A unique-key race on first insert increments the winning row instead of losing the report."""
     engine = create_database_engine(f"sqlite:///{tmp_path / 'race.db'}")
@@ -217,7 +307,7 @@ def test_sanitize_incident_description_removes_contact_details() -> None:
 
 
 def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agent(tmp_path, monkeypatch) -> None:
-    """Signed-in users can add and edit monitoring data; admins alone can delete it."""
+    """Admins alone can create, change, or delete monitoring data."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
     monkeypatch.setenv("EIVEN_SERVICE_URL", f"sqlite:///{tmp_path / 'incident_stats.db'}")
     monkeypatch.setenv("ADMIN_EMAILS", "owner@example.org")
@@ -331,12 +421,6 @@ def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agen
         assert updated.json()["total_count"] == 4
         assert deleted.status_code == 204
 
-        with TestClient(app) as client:
-            missing = client.delete("/api/v1/monitoring/incident-statistics/stat_2")
-
-        assert missing.status_code == 404
-
-        current_identity = UserIdentity(user_id="owner_2", email="other@example.org")
         place_payload = {
             "name": "Bukavu",
             "country": "Democratic Republic of the Congo",
@@ -344,15 +428,35 @@ def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agen
             "longitude": 28.8608,
         }
         with TestClient(app) as client:
-            # Signed-in users can read, create, and edit monitoring data.
-            assert client.get("/api/v1/monitoring/known-places?include_inactive=true").status_code == 200
-            assert client.get("/api/v1/monitoring/incident-statistics?agent_id=company_1").status_code == 200
-            assert client.post("/api/v1/monitoring/known-places", json=place_payload).status_code == 201
-            assert client.put(
+            created_place = client.post("/api/v1/monitoring/known-places", json=place_payload)
+            updated_place = client.put(
                 "/api/v1/monitoring/known-places/1",
                 json={**place_payload, "name": "Goma Central"},
-            ).status_code == 200
-            assert client.delete("/api/v1/monitoring/known-places/1").status_code == 403
+            )
+            deleted_place = client.delete("/api/v1/monitoring/known-places/1")
+            remaining_places = client.get("/api/v1/monitoring/known-places?include_inactive=true")
+
+        assert created_place.status_code == 201
+        assert updated_place.status_code == 200
+        assert deleted_place.status_code == 204
+        assert [place["name"] for place in remaining_places.json()] == ["Bukavu"]
+
+        with TestClient(app) as client:
+            missing = client.delete("/api/v1/monitoring/incident-statistics/stat_2")
+
+        assert missing.status_code == 404
+
+        current_identity = UserIdentity(user_id="owner_2", email="other@example.org")
+        with TestClient(app) as client:
+            # Signed-in users can read monitoring data but cannot change it.
+            assert client.get("/api/v1/monitoring/known-places?include_inactive=true").status_code == 200
+            assert client.get("/api/v1/monitoring/incident-statistics?agent_id=company_1").status_code == 200
+            assert client.post("/api/v1/monitoring/known-places", json=place_payload).status_code == 403
+            assert client.put(
+                "/api/v1/monitoring/known-places/2",
+                json={**place_payload, "name": "Bukavu Central"},
+            ).status_code == 403
+            assert client.delete("/api/v1/monitoring/known-places/2").status_code == 403
             assert client.put(
                 "/api/v1/monitoring/incident-statistics/stat_1",
                 json={
@@ -361,7 +465,7 @@ def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agen
                     "type": "Casualties",
                     "total_count": 4,
                 },
-            ).status_code == 200
+            ).status_code == 403
             assert client.delete("/api/v1/monitoring/incident-statistics/stat_1").status_code == 403
     finally:
         app.dependency_overrides.clear()

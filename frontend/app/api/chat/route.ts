@@ -5,6 +5,7 @@ import { resolve_auth_bearer_for_backend } from "@/lib/server/resolve_auth_beare
 const SUPPORTED_LANGUAGES = ["English", "Swahili", "French", "Arabic", "Portuguese"] as const
 type ChatLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 type ChatHistoryMessage = { role: "user" | "assistant"; content: string }
+type ReportLocation = { latitude: number; longitude: number; accuracy_m: number }
 
 function get_backend_base_url(): string {
   const raw =
@@ -34,19 +35,32 @@ function parse_history(value: unknown): ChatHistoryMessage[] | null {
   return history
 }
 
+function parse_location(value: unknown): ReportLocation | null | undefined {
+  if (value === undefined) return undefined
+  if (typeof value !== "object" || value === null) return null
+  const { latitude, longitude, accuracy_m } = value as Record<string, unknown>
+  if (
+    typeof latitude !== "number" || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
+    typeof longitude !== "number" || !Number.isFinite(longitude) || longitude < -180 || longitude > 180 ||
+    typeof accuracy_m !== "number" || !Number.isFinite(accuracy_m) || accuracy_m < 0 || accuracy_m > 100000
+  ) return null
+  return { latitude, longitude, accuracy_m }
+}
+
 function parse_chat_body(
   body: unknown,
-): { company_id: string; message: string; language: ChatLanguage; history: ChatHistoryMessage[] } | null {
+): { company_id: string; message: string; language: ChatLanguage; history: ChatHistoryMessage[]; location?: ReportLocation } | null {
   if (typeof body !== "object" || body === null) return null
   const company_id = (body as { company_id?: unknown }).company_id
   const message = (body as { message?: unknown }).message
   const language = (body as { language?: unknown }).language ?? "English"
   const history = parse_history((body as { history?: unknown }).history)
+  const location = parse_location((body as { location?: unknown }).location)
   if (typeof company_id !== "string" || company_id.trim().length === 0) return null
   if (typeof message !== "string" || message.trim().length === 0) return null
   if (!is_supported_language(language)) return null
-  if (history === null) return null
-  return { company_id: company_id.trim(), message: message.trim(), language, history }
+  if (history === null || location === null) return null
+  return { company_id: company_id.trim(), message: message.trim(), language, history, ...(location ? { location } : {}) }
 }
 
 /**
@@ -88,6 +102,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         message: parsed.message,
         language: parsed.language,
         history: parsed.history,
+        ...(parsed.location ? { location: parsed.location } : {}),
       }),
     })
   } catch {

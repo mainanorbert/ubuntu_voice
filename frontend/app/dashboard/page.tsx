@@ -135,6 +135,7 @@ export default function DashboardPage() {
 
     const initial_load = window.setTimeout(() => void load_hotspot_data(), 0)
     const refresh_map = () => void load_hotspot_data(map_agent_id_ref.current)
+    const refresh_interval = window.setInterval(refresh_map, 30_000)
     window.addEventListener("known-places-updated", refresh_map)
     window.addEventListener("focus", refresh_map)
     const place_updates =
@@ -145,6 +146,7 @@ export default function DashboardPage() {
 
     return () => {
       window.clearTimeout(initial_load)
+      window.clearInterval(refresh_interval)
       window.removeEventListener("known-places-updated", refresh_map)
       window.removeEventListener("focus", refresh_map)
       place_updates?.close()
