@@ -254,7 +254,7 @@ async def list_incident_statistics(
         base_query = base_query.filter(IncidentStatistic.company_id == agent_id)
 
     total = base_query.count()
-    total_reports, places, categories = base_query.with_entities(
+    total_incidents, places, categories = base_query.with_entities(
         func.coalesce(func.sum(IncidentStatistic.total_count), 0),
         func.count(
             func.distinct(
@@ -289,6 +289,10 @@ async def list_incident_statistics(
         total=total,
         page=page,
         page_size=page_size,
-        summary=IncidentStatisticsSummary(total_reports=int(total_reports), places=places, categories=categories),
+        summary=IncidentStatisticsSummary(
+            total_incidents=int(total_incidents),
+            places=places,
+            categories=categories,
+        ),
         agents=[IncidentStatisticsAgent(id=company_id, name=company_name) for company_id, company_name in agents],
     )

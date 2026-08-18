@@ -389,7 +389,7 @@ def test_incident_statistics_endpoint_returns_all_agent_rows_and_filters_by_agen
         assert data["total"] == 2
         assert len(data["items"]) == 2
         assert {row["company_id"] for row in data["items"]} == {"company_1", "company_2"}
-        assert data["summary"] == {"total_reports": 11, "places": 2, "categories": 2}
+        assert data["summary"] == {"total_incidents": 11, "places": 2, "categories": 2}
         assert data["agents"] == [
             {"id": "company_1", "name": "DRC Women Peacebuilders"},
             {"id": "company_2", "name": "Other Agent"},

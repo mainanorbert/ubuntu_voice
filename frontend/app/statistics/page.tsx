@@ -25,7 +25,7 @@ type IncidentStatisticResponse = {
 }
 type Agent = { id: string; name: string }
 type StatisticsSummary = {
-  total_reports: number
+  total_incidents: number
   places: number
   categories: number
 }
@@ -123,7 +123,7 @@ export default function StatisticsPage() {
   const [page, set_page] = useState(1)
   const [total, set_total] = useState(0)
   const [summary, set_summary] = useState<StatisticsSummary>({
-    total_reports: 0,
+    total_incidents: 0,
     places: 0,
     categories: 0,
   })
@@ -293,10 +293,10 @@ export default function StatisticsPage() {
           <div className="rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-medium text-[#607694]">
               <ShieldAlert className="size-4 text-[#2864e8]" />
-              Total reports
+              Reported incidents
             </div>
             <p className="mt-3 text-2xl font-semibold text-[#061b3b]">
-              {format_count(summary.total_reports)}
+              {format_count(summary.total_incidents)}
             </p>
           </div>
           <div className="rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm">
@@ -311,10 +311,10 @@ export default function StatisticsPage() {
           <div className="rounded-xl border border-[#dce4ef] bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-medium text-[#607694]">
               <ShieldAlert className="size-4 text-[#2864e8]" />
-              Total reported cases
+              Incident categories
             </div>
             <p className="mt-3 text-2xl font-semibold text-[#061b3b]">
-              {format_count(summary.total_reports)}
+              {format_count(summary.categories)}
             </p>
           </div>
         </section>
@@ -420,7 +420,7 @@ export default function StatisticsPage() {
                   </select>
                 </label>
                 <label className="text-sm font-medium text-[#1E3A8A]">
-                  Total count <span className="text-[#DC2626]">*</span>
+                  Incident count <span className="text-[#DC2626]">*</span>
                   <input
                     required
                     type="number"
@@ -474,7 +474,7 @@ export default function StatisticsPage() {
                     <th className="px-5 py-3 font-medium">Agent</th>
                     <th className="px-5 py-3 font-medium">Description</th>
                     <th className="px-5 py-3 font-medium">Type</th>
-                    <th className="px-5 py-3 font-medium">Total count</th>
+                    <th className="px-5 py-3 font-medium">Reported incidents</th>
                     <th className="px-5 py-3 font-medium">Updated</th>
                     <th className="px-5 py-3 font-medium">Actions</th>
                   </tr>

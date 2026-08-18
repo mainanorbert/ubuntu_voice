@@ -61,7 +61,7 @@ class IncidentStatisticUpdate(BaseModel):
 class IncidentStatisticsSummary(BaseModel):
     """Aggregate values for the currently selected incident-statistics filter."""
 
-    total_reports: int
+    total_incidents: int
     places: int
     categories: int
 

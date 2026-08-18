@@ -60,6 +60,14 @@ function place_key(value: string): string {
 
 const DOT_SIZE = 18
 
+function incident_label(count: number): string {
+  return `${count} ${count === 1 ? "incident" : "incidents"}`
+}
+
+function incident_type_label(type: string): string {
+  return type === "Casualties" ? "Casualty" : type
+}
+
 function cluster_radius(category_count: number): number {
   if (category_count < 2) return 0
   // Arrange equal dots on a ring so neighboring categories touch, clearly
@@ -184,7 +192,7 @@ export function IncidentHotspotMap({
             <AdvancedMarker
               key={hotspot.id}
               position={hotspot.position}
-              title={`${hotspot.place}: ${hotspot.count} ${hotspot.type}`}
+              title={`${incident_type_label(hotspot.type)}: ${incident_label(hotspot.count)}`}
               onClick={() => set_selected_hotspot(hotspot)}
             >
               <div
@@ -193,7 +201,7 @@ export function IncidentHotspotMap({
                 }}
               >
                 <div
-                  aria-label={`${hotspot.place}: ${hotspot.count} ${hotspot.type}`}
+                  aria-label={`${incident_type_label(hotspot.type)}: ${incident_label(hotspot.count)}`}
                   className="cursor-pointer rounded-full border-2 border-white shadow-md transition-transform hover:scale-125 focus-visible:ring-2 focus-visible:ring-[#1E3A8A] focus-visible:ring-offset-2 focus-visible:outline-none"
                   role="button"
                   tabIndex={0}
@@ -223,10 +231,9 @@ export function IncidentHotspotMap({
             onCloseClick={() => set_selected_hotspot(null)}
           >
             <div className="max-w-52 px-1 py-0.5 text-[#1E3A8A]">
-              <p className="font-semibold">{selected_hotspot.place}</p>
-              <p className="mt-1 text-sm">{selected_hotspot.type}</p>
               <p className="text-sm">
-                Reports: <strong>{selected_hotspot.count}</strong>
+                {incident_type_label(selected_hotspot.type)}: {" "}
+                <strong>{incident_label(selected_hotspot.count)}</strong>
               </p>
             </div>
           </InfoWindow>

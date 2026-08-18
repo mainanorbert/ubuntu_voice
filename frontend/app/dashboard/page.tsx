@@ -21,7 +21,7 @@ import type {
 
 type CurrentUser = { name: string | null; is_admin?: boolean }
 type Agent = { id: string; name: string }
-type StatisticsSummary = { total_reports: number; places: number }
+type StatisticsSummary = { total_incidents: number; places: number }
 type IncidentStatisticsPage = {
   items: IncidentStatistic[]
   total: number
@@ -38,7 +38,7 @@ function is_incident_statistics_page(
     Array.isArray((value as IncidentStatisticsPage).items) &&
     typeof (value as IncidentStatisticsPage).total === "number" &&
     Array.isArray((value as IncidentStatisticsPage).agents) &&
-    typeof (value as IncidentStatisticsPage).summary?.total_reports ===
+    typeof (value as IncidentStatisticsPage).summary?.total_incidents ===
       "number" &&
     typeof (value as IncidentStatisticsPage).summary?.places === "number"
   )
@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const [map_agent_id, set_map_agent_id] = useState("")
   const [map_agents, set_map_agents] = useState<Agent[]>([])
   const [summary, set_summary] = useState<StatisticsSummary>({
-    total_reports: 0,
+    total_incidents: 0,
     places: 0,
   })
   const map_agent_id_ref = useRef(map_agent_id)
@@ -252,8 +252,8 @@ export default function DashboardPage() {
               value={format_count(map_agents.length)}
             />
             <SummaryCard
-              label="Reported cases"
-              value={format_count(summary.total_reports)}
+              label="Reported incidents"
+              value={format_count(summary.total_incidents)}
             />
             <SummaryCard
               label="Locations"
@@ -349,16 +349,16 @@ export default function DashboardPage() {
           <section className="mt-6 grid gap-4 xl:grid-cols-[1.35fr_1fr]">
             <Panel title="Recent activity">
               {map_loading ? (
-                <PanelMessage>Loading recent reported cases...</PanelMessage>
+                <PanelMessage>Loading recent incidents...</PanelMessage>
               ) : recent_activity.length === 0 ? (
-                <PanelMessage>No reported cases yet.</PanelMessage>
+                <PanelMessage>No incidents reported yet.</PanelMessage>
               ) : (
                 recent_activity.map((statistic) => (
                   <ActivityRow
                     key={statistic.id ?? `${statistic.place}-${statistic.type}`}
                     tone={activity_tone(statistic.type)}
                     title={`${statistic.type} reported in ${statistic.place}`}
-                    detail={`${statistic.company_name ?? "Community report"} · ${format_count(statistic.total_count)} total · ${format_timestamp(statistic.updated_at)}`}
+                    detail={`${statistic.company_name ?? "Community report"} · ${format_incident_count(statistic.total_count)} · ${format_timestamp(statistic.updated_at)}`}
                   />
                 ))
               )}
@@ -428,6 +428,11 @@ function format_count(value: number): string {
   return new Intl.NumberFormat().format(value)
 }
 
+function format_incident_count(value: number): string {
+  const count = format_count(value)
+  return `${count} ${value === 1 ? "incident" : "incidents"}`
+}
+
 function format_timestamp(iso: string): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return "Recently"
@@ -488,7 +493,7 @@ function HotspotRow({ place, count }: { place: string; count: number }) {
     <div className="flex items-center justify-between gap-3 border-b border-[#edf1f6] py-2.5 last:border-0">
       <p className="truncate font-serif text-base">{place}</p>
       <span className="shrink-0 rounded-full bg-[#eef5ff] px-2.5 py-1 text-xs font-medium text-[#1E3A8A] dark:bg-[#1E3A8A] dark:text-white">
-        {format_count(count)} cases
+        {format_incident_count(count)}
       </span>
     </div>
   )
