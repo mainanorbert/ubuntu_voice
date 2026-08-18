@@ -109,6 +109,8 @@ async def post_agent_chat(
         recipient_email=company.email,
         user_message=body.message,
         language=body.language,
+        location=(body.location.latitude, body.location.longitude) if body.location is not None else None,
+        google_maps_api_key=getattr(settings, "google_maps_api_key", None),
     )
 
     reply, grounded, usage_charges = await run_rag_agent(

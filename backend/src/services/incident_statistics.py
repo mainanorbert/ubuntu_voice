@@ -8,7 +8,6 @@ import re
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Literal
 
-import httpx
 from agents import Agent, OpenAIChatCompletionsModel, Runner
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
@@ -19,21 +18,14 @@ from sqlalchemy.orm import Session
 from src.core.database import create_database_engine, create_session_factory
 from src.models import IncidentStatistic, KnownPlace, generate_uuid
 from src.services.conflict_alerts import redact_personal_contact_details
+from src.services.location_geocoding import (
+    APPROXIMATE_LOCATION_LABEL,
+    reverse_geocode_short_place_name,
+    select_short_place_name,
+)
 from src.services.openrouter_agent import create_openrouter_async_client
 
 logger = logging.getLogger(__name__)
-
-APPROXIMATE_LOCATION_LABEL = "Approximate current location"
-GEOCODING_ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json"
-GEOCODING_COMPONENT_PRIORITY = (
-    "locality",
-    "sublocality_level_1",
-    "sublocality",
-    "neighborhood",
-    "administrative_area_level_2",
-    "administrative_area_level_1",
-    "country",
-)
 
 IncidentType = Literal["Rights Violations", "Displacements", "Casualties", "Severe Hunger"]
 ALLOWED_INCIDENT_TYPES = {"Rights Violations", "Displacements", "Casualties", "Severe Hunger"}
@@ -116,48 +108,6 @@ def sanitize_incident_description(description: str) -> str:
     """Remove obvious personal details from classifier-provided summaries."""
     sanitized = redact_personal_contact_details(description)
     return re.sub(r"\s+", " ", sanitized).strip()[:500]
-
-
-def select_short_place_name(payload: dict) -> str | None:
-    """Select the shortest useful locality from a Google geocoding response."""
-    candidates: dict[str, str] = {}
-    for result in payload.get("results", []):
-        if not isinstance(result, dict):
-            continue
-        for component in result.get("address_components", []):
-            if not isinstance(component, dict):
-                continue
-            name = component.get("long_name")
-            types = component.get("types", [])
-            if isinstance(name, str) and name.strip() and isinstance(types, list):
-                for component_type in types:
-                    if component_type in GEOCODING_COMPONENT_PRIORITY and component_type not in candidates:
-                        candidates[component_type] = re.sub(r"[\x00-\x1f\x7f]", "", name).strip()[:160]
-    for component_type in GEOCODING_COMPONENT_PRIORITY:
-        if candidates.get(component_type):
-            return candidates[component_type]
-    return None
-
-
-async def reverse_geocode_short_place_name(
-    *, api_key: str, latitude: Decimal, longitude: Decimal
-) -> str | None:
-    """Best-effort lookup of a locality label; never raises into chat processing."""
-    try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(2.0, connect=1.0)) as client:
-            response = await client.get(
-                GEOCODING_ENDPOINT,
-                params={"latlng": f"{latitude},{longitude}", "key": api_key},
-            )
-            response.raise_for_status()
-            payload = response.json()
-            if payload.get("status") != "OK":
-                logger.info("Reverse geocoding returned status=%s", payload.get("status"))
-                return None
-            return select_short_place_name(payload)
-    except (httpx.HTTPError, ValueError, TypeError) as exc:
-        logger.warning("Reverse geocoding failed: error=%s", exc.__class__.__name__)
-        return None
 
 
 async def enrich_gps_statistic_places(

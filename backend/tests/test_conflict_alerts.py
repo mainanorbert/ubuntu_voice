@@ -126,6 +126,10 @@ def test_maybe_send_conflict_alert_uses_dynamic_email_fields(monkeypatch) -> Non
 
     monkeypatch.setattr(conflict_alerts, "decide_conflict_alert", fake_decide_conflict_alert)
     monkeypatch.setattr(conflict_alerts, "draft_conflict_alert", fake_draft_conflict_alert)
+    async def fake_reverse_geocode(**_kwargs) -> str:
+        return "Nairobi"
+
+    monkeypatch.setattr(conflict_alerts, "reverse_geocode_short_place_name", fake_reverse_geocode)
     monkeypatch.setattr(conflict_alerts, "send_conflict_alert_email", fake_send_conflict_alert_email)
     monkeypatch.setattr(conflict_alerts, "send_conflict_alert_sms", fake_send_conflict_alert_sms)
     monkeypatch.setattr(conflict_alerts, "send_conflict_alert_push", fake_send_conflict_alert_push)
@@ -147,6 +151,8 @@ def test_maybe_send_conflict_alert_uses_dynamic_email_fields(monkeypatch) -> Non
             recipient_email="agent-contact@example.org",
             user_message="Militia violence is about to break out near City X.",
             language="English",
+            location=(-1.2864, 36.8172),
+            google_maps_api_key="maps-key",
         )
     )
 
@@ -157,6 +163,7 @@ def test_maybe_send_conflict_alert_uses_dynamic_email_fields(monkeypatch) -> Non
     assert email_calls[0]["alert"].subject == "Urgent report for DRC Women Peacebuilders"
     assert "Agent: DRC Women Peacebuilders" in email_calls[0]["alert"].body
     assert "Detected at:" in email_calls[0]["alert"].body
+    assert "Location: Nairobi" in email_calls[0]["alert"].body
     assert "City X" in email_calls[0]["alert"].body
     assert sms_calls[0]["twilio_account_sid"] == "AC123"
     assert sms_calls[0]["twilio_auth_token"] == "token"
