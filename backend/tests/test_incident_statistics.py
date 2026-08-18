@@ -1,5 +1,6 @@
 """Tests for incident-statistics classifier parsing and persistence."""
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -14,10 +15,34 @@ from src.services.incident_statistics import (
     IncidentClassifierOutput,
     IncidentLocation,
     IncidentStatisticRecord,
+    enrich_gps_statistic_places,
     parse_incident_classifier_json,
     sanitize_incident_description,
+    select_short_place_name,
     upsert_incident_statistics,
 )
+
+
+def test_select_short_place_name_prefers_city_over_street() -> None:
+    """Reverse-geocoder output is reduced to a useful locality label."""
+    assert select_short_place_name(
+        {
+            "results": [
+                {
+                    "address_components": [
+                        {"long_name": "Bedford Avenue", "types": ["route"]},
+                        {"long_name": "Brooklyn", "types": ["sublocality", "political"]},
+                        {"long_name": "New York", "types": ["locality", "political"]},
+                    ]
+                }
+            ]
+        }
+    ) == "New York"
+
+
+def test_select_short_place_name_returns_none_without_locality() -> None:
+    """Remote coordinates keep the safe fallback when no place component exists."""
+    assert select_short_place_name({"results": [{"address_components": []}]}) is None
 
 
 @pytest.mark.parametrize(
@@ -230,6 +255,46 @@ def test_gps_location_records_an_incident_without_a_named_place() -> None:
         assert row.place == "Approximate current location"
         assert row.normalized_place == ""
         assert row.location_source == "gps"
+
+
+def test_gps_place_is_enriched_without_changing_aggregation_key(monkeypatch) -> None:
+    """A successful lookup replaces only the display label on the existing GPS row."""
+    engine = create_database_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    factory = create_session_factory(engine)
+
+    async def fake_reverse_geocode(**_kwargs):
+        return "Nairobi"
+
+    monkeypatch.setattr(
+        "src.services.incident_statistics.reverse_geocode_short_place_name",
+        fake_reverse_geocode,
+    )
+
+    with factory() as session:
+        location = IncidentLocation(latitude=-1.1562, longitude=36.9419, accuracy_m=20)
+        upsert_incident_statistics(
+            session,
+            company_id="company_1",
+            classifier_output=IncidentClassifierOutput(
+                should_record=True,
+                records=[IncidentStatisticRecord(place=None, description="Incident.", type="Casualties")],
+            ),
+            location=location,
+        )
+        asyncio.run(
+            enrich_gps_statistic_places(
+                session=session,
+                company_id="company_1",
+                location=location,
+                api_key="server-key",
+            )
+        )
+
+        row = session.query(IncidentStatistic).one()
+        assert row.place == "Nairobi"
+        assert row.location_key == "gps:-1.156:36.942"
+        assert row.normalized_place == ""
 
 
 def test_upsert_retries_as_increment_when_concurrent_insert_wins(tmp_path, monkeypatch) -> None:

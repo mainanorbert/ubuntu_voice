@@ -84,6 +84,7 @@ async def post_agent_chat(
         openrouter_api_key=settings.openrouter_api_key,
         openrouter_base_url=settings.openrouter_base_url,
         chat_model=settings.openrouter_model,
+        google_maps_api_key=getattr(settings, "google_maps_api_key", None),
         company_id=company.id,
         user_prompt=body.message,
         location=(IncidentLocation.model_validate(body.location.model_dump()) if body.location is not None else None),

@@ -8,6 +8,7 @@ import re
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Literal
 
+import httpx
 from agents import Agent, OpenAIChatCompletionsModel, Runner
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
@@ -21,6 +22,18 @@ from src.services.conflict_alerts import redact_personal_contact_details
 from src.services.openrouter_agent import create_openrouter_async_client
 
 logger = logging.getLogger(__name__)
+
+APPROXIMATE_LOCATION_LABEL = "Approximate current location"
+GEOCODING_ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json"
+GEOCODING_COMPONENT_PRIORITY = (
+    "locality",
+    "sublocality_level_1",
+    "sublocality",
+    "neighborhood",
+    "administrative_area_level_2",
+    "administrative_area_level_1",
+    "country",
+)
 
 IncidentType = Literal["Rights Violations", "Displacements", "Casualties", "Severe Hunger"]
 ALLOWED_INCIDENT_TYPES = {"Rights Violations", "Displacements", "Casualties", "Severe Hunger"}
@@ -105,6 +118,81 @@ def sanitize_incident_description(description: str) -> str:
     return re.sub(r"\s+", " ", sanitized).strip()[:500]
 
 
+def select_short_place_name(payload: dict) -> str | None:
+    """Select the shortest useful locality from a Google geocoding response."""
+    candidates: dict[str, str] = {}
+    for result in payload.get("results", []):
+        if not isinstance(result, dict):
+            continue
+        for component in result.get("address_components", []):
+            if not isinstance(component, dict):
+                continue
+            name = component.get("long_name")
+            types = component.get("types", [])
+            if isinstance(name, str) and name.strip() and isinstance(types, list):
+                for component_type in types:
+                    if component_type in GEOCODING_COMPONENT_PRIORITY and component_type not in candidates:
+                        candidates[component_type] = re.sub(r"[\x00-\x1f\x7f]", "", name).strip()[:160]
+    for component_type in GEOCODING_COMPONENT_PRIORITY:
+        if candidates.get(component_type):
+            return candidates[component_type]
+    return None
+
+
+async def reverse_geocode_short_place_name(
+    *, api_key: str, latitude: Decimal, longitude: Decimal
+) -> str | None:
+    """Best-effort lookup of a locality label; never raises into chat processing."""
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(2.0, connect=1.0)) as client:
+            response = await client.get(
+                GEOCODING_ENDPOINT,
+                params={"latlng": f"{latitude},{longitude}", "key": api_key},
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if payload.get("status") != "OK":
+                logger.info("Reverse geocoding returned status=%s", payload.get("status"))
+                return None
+            return select_short_place_name(payload)
+    except (httpx.HTTPError, ValueError, TypeError) as exc:
+        logger.warning("Reverse geocoding failed: error=%s", exc.__class__.__name__)
+        return None
+
+
+async def enrich_gps_statistic_places(
+    *, session: Session, company_id: str, location: IncidentLocation, api_key: str | None
+) -> None:
+    """Replace fallback GPS labels after persistence without changing aggregation keys."""
+    if not api_key:
+        return
+    latitude = _rounded_coordinate(location.latitude)
+    longitude = _rounded_coordinate(location.longitude)
+    location_key = f"gps:{latitude:.3f}:{longitude:.3f}"
+    already_named = (
+        session.query(IncidentStatistic.id)
+        .filter(
+            IncidentStatistic.company_id == company_id,
+            IncidentStatistic.location_key == location_key,
+            IncidentStatistic.place != APPROXIMATE_LOCATION_LABEL,
+            IncidentStatistic.normalized_place == "",
+        )
+        .first()
+    )
+    if already_named is not None:
+        return
+    place_name = await reverse_geocode_short_place_name(api_key=api_key, latitude=latitude, longitude=longitude)
+    if not place_name:
+        return
+    session.query(IncidentStatistic).filter(
+        IncidentStatistic.company_id == company_id,
+        IncidentStatistic.location_key == location_key,
+        IncidentStatistic.place == APPROXIMATE_LOCATION_LABEL,
+        IncidentStatistic.normalized_place == "",
+    ).update({"place": place_name, "updated_at": func.now()}, synchronize_session=False)
+    session.commit()
+
+
 def parse_incident_classifier_json(raw_output: str) -> IncidentClassifierOutput:
     """Parse and validate raw classifier JSON from a model response."""
     try:
@@ -181,7 +269,7 @@ def upsert_incident_statistics(
         if key in seen_keys:
             continue
         seen_keys.add(key)
-        display_place = reported_place or "Approximate current location"
+        display_place = reported_place or APPROXIMATE_LOCATION_LABEL
         stored_normalized_place = "" if location is not None else normalized_place
 
         location_match = or_(
@@ -191,6 +279,17 @@ def upsert_incident_statistics(
                 IncidentStatistic.normalized_place == normalized_place,
             ),
         )
+        update_values: dict[str, object] = {
+            "normalized_place": stored_normalized_place,
+            "description": description,
+            "total_count": IncidentStatistic.total_count + 1,
+            "updated_at": func.now(),
+            **location_values,
+        }
+        # Preserve an explicit user-reported place when a later report only
+        # supplies GPS; the geocoder is responsible for fallback labels.
+        if reported_place:
+            update_values["place"] = reported_place
         statement = (
             update(IncidentStatistic)
             .where(
@@ -198,14 +297,7 @@ def upsert_incident_statistics(
                 location_match,
                 IncidentStatistic.type == record.type,
             )
-            .values(
-                place=display_place,
-                normalized_place=stored_normalized_place,
-                description=description,
-                total_count=IncidentStatistic.total_count + 1,
-                updated_at=func.now(),
-                **location_values,
-            )
+            .values(**update_values)
         )
         result = session.execute(statement)
         if result.rowcount == 0:
@@ -248,6 +340,7 @@ async def classify_and_store_incident_statistics(
     openrouter_api_key: str,
     openrouter_base_url: str,
     chat_model: str,
+    google_maps_api_key: str | None = None,
     company_id: str,
     user_prompt: str,
     location: IncidentLocation | None = None,
@@ -275,6 +368,13 @@ async def classify_and_store_incident_statistics(
     session = factory()
     try:
         upsert_incident_statistics(session, company_id=company_id, classifier_output=classifier_output, location=location)
+        if location is not None:
+            await enrich_gps_statistic_places(
+                session=session,
+                company_id=company_id,
+                location=location,
+                api_key=google_maps_api_key,
+            )
     except Exception as exc:  # noqa: BLE001 - best-effort monitoring path.
         session.rollback()
         logger.warning(

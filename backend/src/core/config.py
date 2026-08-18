@@ -207,6 +207,11 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRETE"),
         description="Google OAuth web client secret.",
     )
+    google_maps_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GOOGLE_MAPS_API_KEY", "GOOGLE_GEOCODING_API_KEY"),
+        description="Server-only Google Maps Geocoding API key used for approximate place labels.",
+    )
     database_url: str = Field(
         validation_alias=AliasChoices("EIVEN_SERVICE_URL", "DATABASE_URL"),
         description="Aiven PostgreSQL Service URI (postgres:// or postgresql+psycopg2://)",
