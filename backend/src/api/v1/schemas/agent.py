@@ -11,6 +11,14 @@ ChatLanguage = Literal["English", "Swahili", "French", "Arabic", "Portuguese"]
 ChatHistoryRole = Literal["user", "assistant"]
 
 
+class ReportLocation(BaseModel):
+    """A browser-provided location used only to place a report on the map."""
+
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+    accuracy_m: float = Field(..., ge=0, le=100_000)
+
+
 class ChatHistoryMessage(BaseModel):
     """A recent chat turn used to make follow-up RAG questions contextual."""
 
@@ -66,6 +74,10 @@ class AgentChatRequest(BaseModel):
         default_factory=list,
         max_length=8,
         description="Recent user/assistant turns sent only for this request to support follow-up questions.",
+    )
+    location: ReportLocation | None = Field(
+        default=None,
+        description="Optional current browser location. It never prevents a chat reply when absent.",
     )
 
 

@@ -272,7 +272,7 @@ class IncidentStatistic(Base):
 
     __tablename__ = "incident_statistics"
     __table_args__ = (
-        UniqueConstraint("company_id", "normalized_place", "type", name="uq_incident_stats_company_place_type"),
+        UniqueConstraint("company_id", "location_key", "type", name="uq_incident_stats_company_location_type"),
         CheckConstraint(
             "type IN ('Rights Violations', 'Displacements', 'Casualties', 'Severe Hunger')",
             name="ck_incident_statistics_type",
@@ -280,6 +280,9 @@ class IncidentStatistic(Base):
         Index("ix_incident_statistics_company_id", "company_id"),
         Index("ix_incident_statistics_normalized_place", "normalized_place"),
         Index("ix_incident_statistics_updated_at", "updated_at"),
+        Index("ix_incident_statistics_known_place_id", "known_place_id"),
+        Index("ix_incident_statistics_location_key", "location_key"),
+        CheckConstraint("location_source IN ('gps', 'known_place', 'unmapped')", name="ck_incident_statistics_location_source"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
@@ -290,6 +293,14 @@ class IncidentStatistic(Base):
     )
     place: Mapped[str] = mapped_column(Text, nullable=False)
     normalized_place: Mapped[str] = mapped_column(Text, nullable=False)
+    known_place_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("known_places.id", ondelete="SET NULL"), nullable=True
+    )
+    latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
+    longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
+    location_accuracy_m: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    location_source: Mapped[str] = mapped_column(Text, nullable=False, default="unmapped", server_default="unmapped")
+    location_key: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     description: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str] = mapped_column(Text, nullable=False)
     total_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")

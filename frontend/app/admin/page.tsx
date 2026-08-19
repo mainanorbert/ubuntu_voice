@@ -129,6 +129,25 @@ export default function AdminAgentsPage() {
       set_busy(null)
     }
   }
+  const delete_agent = async (agent: Agent) => {
+    if (!window.confirm(`Delete “${agent.name}”? This permanently removes the agent, its statistics, documents, and related records.`)) return
+    set_busy(agent.id)
+    set_error(null)
+    try {
+      const response = await fetch(`/api/admin/agents/${encodeURIComponent(agent.id)}`, { method: "DELETE" })
+      const data: unknown = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        set_error(error_text(data))
+        return
+      }
+      set_agents((current) => current.filter((item) => item.id !== agent.id))
+      set_total((current) => Math.max(0, current - 1))
+    } catch {
+      set_error("The agent could not be deleted. Please check your connection and try again.")
+    } finally {
+      set_busy(null)
+    }
+  }
   const first_item = total === 0 ? 0 : (page - 1) * page_size + 1
   const last_item = Math.min(page * page_size, total)
   return (
@@ -204,6 +223,14 @@ export default function AdminAgentsPage() {
                         : agent.is_approved
                           ? "Suspend"
                           : "Approve"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy === agent.id}
+                      onClick={() => void delete_agent(agent)}
+                      className="ml-2 rounded-md bg-[#DC2626] px-3 py-2 text-white disabled:opacity-50"
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>

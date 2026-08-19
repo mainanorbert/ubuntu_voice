@@ -16,7 +16,7 @@ from src.services.guardrails import (
     evaluate_output,
     record_guardrail_event,
 )
-from src.services.incident_statistics import classify_and_store_incident_statistics
+from src.services.incident_statistics import IncidentLocation, classify_and_store_incident_statistics
 from src.models import Company
 from src.services.ingestion import upsert_user
 from src.services.conflict_alerts import maybe_send_conflict_alert
@@ -84,8 +84,10 @@ async def post_agent_chat(
         openrouter_api_key=settings.openrouter_api_key,
         openrouter_base_url=settings.openrouter_base_url,
         chat_model=settings.openrouter_model,
+        google_maps_api_key=getattr(settings, "google_maps_api_key", None),
         company_id=company.id,
         user_prompt=body.message,
+        location=(IncidentLocation.model_validate(body.location.model_dump()) if body.location is not None else None),
     )
 
     # Alerts belong to the selected agent, not to the identity of the person
@@ -107,6 +109,8 @@ async def post_agent_chat(
         recipient_email=company.email,
         user_message=body.message,
         language=body.language,
+        location=(body.location.latitude, body.location.longitude) if body.location is not None else None,
+        google_maps_api_key=getattr(settings, "google_maps_api_key", None),
     )
 
     reply, grounded, usage_charges = await run_rag_agent(

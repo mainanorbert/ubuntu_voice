@@ -36,6 +36,11 @@ class IncidentStatisticResponse(BaseModel):
     description: str
     type: str
     total_count: int
+    latitude: float | None
+    longitude: float | None
+    location_source: Literal["gps", "known_place", "unmapped"]
+    known_place_id: int | None
+    location_key: str
     updated_at: datetime
 
 
@@ -56,7 +61,7 @@ class IncidentStatisticUpdate(BaseModel):
 class IncidentStatisticsSummary(BaseModel):
     """Aggregate values for the currently selected incident-statistics filter."""
 
-    total_reports: int
+    total_incidents: int
     places: int
     categories: int
 

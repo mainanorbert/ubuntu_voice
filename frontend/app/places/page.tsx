@@ -38,7 +38,7 @@ function notify_known_places_updated() {
 
 export default function PlacesPage() {
   const [places, set_places] = useState<Place[]>([])
-  const [can_delete, set_can_delete] = useState(false)
+  const [can_manage, set_can_manage] = useState(false)
   const [form, set_form] = useState(empty)
   const [editing, set_editing] = useState<number | null>(null)
   const [is_manager_open, set_is_manager_open] = useState(false)
@@ -69,9 +69,9 @@ export default function PlacesPage() {
       .then(async (response) => {
         if (!response.ok) return
         const profile: AuthProfile = await response.json()
-        set_can_delete(profile.is_admin === true)
+        set_can_manage(profile.is_admin === true)
       })
-      .catch(() => set_can_delete(false))
+      .catch(() => set_can_manage(false))
   }, [])
 
   const countries = useMemo(
@@ -148,7 +148,7 @@ export default function PlacesPage() {
   }
 
   async function remove(id: number) {
-    if (!window.confirm("Remove this place from active place lists?")) return
+    if (!window.confirm("Delete this place permanently? This cannot be undone.")) return
     const response = await fetch(`/api/monitoring/known-places/${id}`, {
       method: "DELETE",
     })
@@ -166,21 +166,23 @@ export default function PlacesPage() {
       description="Browse the places available to incident workflows."
     >
       <div className="flex flex-col gap-6">
-        <div>
-          <Button
-            type="button"
-            onClick={() => {
-              if (is_manager_open) close_manager()
-              else set_is_manager_open(true)
-            }}
-            aria-expanded={is_manager_open}
-            aria-controls="place-manager"
-            className="bg-[#2563EB] text-white hover:bg-[#1E3A8A] focus-visible:ring-[#60A5FA]"
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            Manage places
-          </Button>
-        </div>
+        {can_manage ? (
+          <div>
+            <Button
+              type="button"
+              onClick={() => {
+                if (is_manager_open) close_manager()
+                else set_is_manager_open(true)
+              }}
+              aria-expanded={is_manager_open}
+              aria-controls="place-manager"
+              className="bg-[#2563EB] text-white hover:bg-[#1E3A8A] focus-visible:ring-[#60A5FA]"
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              Manage places
+            </Button>
+          </div>
+        ) : null}
 
         {is_manager_open ? (
           <form
@@ -323,15 +325,17 @@ export default function PlacesPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => edit_place(place)}
-                        >
-                          <Pencil className="size-3" aria-hidden="true" />
-                          Edit
-                        </Button>
-                        {can_delete && place.is_active ? (
+                        {can_manage ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => edit_place(place)}
+                          >
+                            <Pencil className="size-3" aria-hidden="true" />
+                            Edit
+                          </Button>
+                        ) : null}
+                        {can_manage && place.is_active ? (
                           <Button
                             size="sm"
                             variant="destructive"

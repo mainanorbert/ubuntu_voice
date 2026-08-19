@@ -13,3 +13,19 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ a
     return NextResponse.json({ error: "The agent status could not be changed. Please try again." }, { status: 502 })
   }
 }
+
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ agentId: string }> }): Promise<NextResponse> {
+  const auth = await resolve_auth_bearer_for_backend()
+  if (!auth.ok) return auth.response
+  const { agentId } = await context.params
+  try {
+    const response = await fetch(`${get_backend_base_url()}/api/v1/companies/${encodeURIComponent(agentId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+    if (response.status === 204) return new NextResponse(null, { status: 204 })
+    return NextResponse.json(await response.json().catch(() => ({})), { status: response.status })
+  } catch {
+    return NextResponse.json({ error: "The agent could not be deleted. Please try again." }, { status: 502 })
+  }
+}

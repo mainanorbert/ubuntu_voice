@@ -12,6 +12,8 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Ensure the project root (containing the ``src`` package) is on sys.path when
 # Alembic is invoked from any working directory via ``uv run alembic ...``.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -24,6 +26,11 @@ from alembic import context
 # Alembic Config object – provides access to values in alembic.ini
 # -----------------------------------------------------------------
 config = context.config
+
+# Alembic runs outside FastAPI's settings bootstrap, so load the backend's
+# local environment file before resolving the database URL. Environment values
+# supplied by deployment platforms still take precedence.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from html import escape
 import logging
 import re
+from decimal import Decimal
 
 from agents import Agent, OpenAIChatCompletionsModel, Runner
 import httpx
@@ -15,6 +16,8 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+
+from src.services.location_geocoding import reverse_geocode_short_place_name
 
 logger = logging.getLogger(__name__)
 
@@ -103,12 +106,14 @@ def build_conflict_alert_from_draft(
     company_name: str,
     detected_at: str,
     draft: ConflictAlertDraft,
+    location_name: str | None = None,
 ) -> ConflictAlert:
     """Build the final minimal alert email body from an agent-generated draft."""
     body = "\n".join(
         [
             f"Agent: {company_name}",
             f"Detected at: {detected_at}",
+            *([f"Location: {location_name}"] if location_name else []),
             f"Summary: {draft.issue_summary}",
         ]
     )
@@ -250,6 +255,8 @@ async def maybe_send_conflict_alert(
     recipient_email: str,
     user_message: str,
     language: str,
+    location: tuple[float, float] | None = None,
+    google_maps_api_key: str | None = None,
     twilio_account_sid: str | None = None,
     twilio_auth_token: str | None = None,
     twilio_sms_from_number: str | None = None,
@@ -284,6 +291,15 @@ async def maybe_send_conflict_alert(
         return False
 
     detected_at = datetime.now(UTC).isoformat(timespec="seconds")
+    location_task = None
+    if location is not None and google_maps_api_key:
+        location_task = asyncio.create_task(
+            reverse_geocode_short_place_name(
+                api_key=google_maps_api_key,
+                latitude=Decimal(str(location[0])).quantize(Decimal("0.001")),
+                longitude=Decimal(str(location[1])).quantize(Decimal("0.001")),
+            )
+        )
     try:
         draft = await draft_conflict_alert(
             async_client=async_client,
@@ -298,12 +314,16 @@ async def maybe_send_conflict_alert(
             company_id,
             exc.__class__.__name__,
         )
+        if location_task is not None:
+            location_task.cancel()
         return False
 
+    location_name = await location_task if location_task is not None else None
     alert = build_conflict_alert_from_draft(
         company_name=company_name,
         detected_at=detected_at,
         draft=draft,
+        location_name=location_name or ("Approximate current location" if location is not None else None),
     )
     email_task = asyncio.create_task(
         send_conflict_alert_email(

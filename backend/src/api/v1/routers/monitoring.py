@@ -36,10 +36,12 @@ async def list_known_places(
 @router.post("/known-places", response_model=KnownPlaceResponse, status_code=201)
 async def create_known_place(
     payload: KnownPlaceInput,
-    _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> KnownPlaceResponse:
-    """Create a known place for any signed-in user."""
+    """Create a known place for configured administrators only."""
+    require_admin(get_authenticated_user_identity(session_state), settings)
     place = KnownPlace(
         name=payload.name.strip(),
         country=payload.country.strip() if payload.country and payload.country.strip() else None,
@@ -60,10 +62,12 @@ async def create_known_place(
 async def update_known_place(
     place_id: int,
     payload: KnownPlaceInput,
-    _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> KnownPlaceResponse:
-    """Update a known place for any signed-in user."""
+    """Update a known place for configured administrators only."""
+    require_admin(get_authenticated_user_identity(session_state), settings)
     place = db_session.get(KnownPlace, place_id)
     if place is None:
         raise HTTPException(status_code=404, detail="Place not found.")
@@ -88,12 +92,12 @@ async def delete_known_place(
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> None:
-    """Deactivate a known place for configured administrators only."""
+    """Permanently delete a known place for configured administrators only."""
     require_admin(get_authenticated_user_identity(session_state), settings)
     place = db_session.get(KnownPlace, place_id)
     if place is None:
         raise HTTPException(status_code=404, detail="Place not found.")
-    place.is_active = False
+    db_session.delete(place)
     db_session.commit()
 
 
@@ -128,6 +132,11 @@ def build_incident_statistic_response(row: IncidentStatistic, company_name: str)
         description=row.description,
         type=row.type,
         total_count=row.total_count,
+        latitude=float(row.latitude) if row.latitude is not None else None,
+        longitude=float(row.longitude) if row.longitude is not None else None,
+        location_source=row.location_source,
+        known_place_id=row.known_place_id,
+        location_key=row.location_key,
         updated_at=row.updated_at,
     )
 
@@ -136,11 +145,12 @@ def build_incident_statistic_response(row: IncidentStatistic, company_name: str)
 async def update_incident_statistic(
     statistic_id: str,
     payload: IncidentStatisticUpdate,
-    _session_state: Annotated[UserIdentity, Depends(require_auth_session)],
+    session_state: Annotated[UserIdentity, Depends(require_auth_session)],
     settings: Annotated[Settings, Depends(get_settings)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> IncidentStatisticResponse:
-    """Allow any signed-in user to correct an aggregated incident row."""
+    """Allow configured administrators to correct an aggregated incident row."""
+    require_admin(get_authenticated_user_identity(session_state), settings)
     row = db_session.get(IncidentStatistic, statistic_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Statistic not found.")
@@ -157,7 +167,7 @@ async def update_incident_statistic(
         db_session.query(IncidentStatistic)
         .filter(
             IncidentStatistic.company_id == row.company_id,
-            IncidentStatistic.normalized_place == normalized_place,
+            IncidentStatistic.location_key == row.location_key,
             IncidentStatistic.type == payload.type,
             IncidentStatistic.id != row.id,
         )
@@ -166,11 +176,11 @@ async def update_incident_statistic(
     if duplicate is not None:
         raise HTTPException(
             status_code=409,
-            detail="A statistic for this agent, place, and category already exists. Edit that row instead.",
+            detail="A statistic for this agent, map location, and category already exists. Edit that row instead.",
         )
 
     row.place = place
-    row.normalized_place = normalized_place
+    row.normalized_place = "" if row.location_source == "gps" else normalized_place
     row.description = description
     row.type = payload.type
     row.total_count = payload.total_count
@@ -244,9 +254,16 @@ async def list_incident_statistics(
         base_query = base_query.filter(IncidentStatistic.company_id == agent_id)
 
     total = base_query.count()
-    total_reports, places, categories = base_query.with_entities(
+    total_incidents, places, categories = base_query.with_entities(
         func.coalesce(func.sum(IncidentStatistic.total_count), 0),
-        func.count(func.distinct(IncidentStatistic.normalized_place)),
+        func.count(
+            func.distinct(
+                func.coalesce(
+                    func.nullif(IncidentStatistic.location_key, ""),
+                    IncidentStatistic.normalized_place,
+                )
+            )
+        ),
         func.count(func.distinct(IncidentStatistic.type)),
     ).one()
     rows = (
@@ -272,6 +289,10 @@ async def list_incident_statistics(
         total=total,
         page=page,
         page_size=page_size,
-        summary=IncidentStatisticsSummary(total_reports=int(total_reports), places=places, categories=categories),
+        summary=IncidentStatisticsSummary(
+            total_incidents=int(total_incidents),
+            places=places,
+            categories=categories,
+        ),
         agents=[IncidentStatisticsAgent(id=company_id, name=company_name) for company_id, company_name in agents],
     )
