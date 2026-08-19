@@ -21,7 +21,7 @@ from src.api.v1.schemas.ingestion import (
     DocumentUploadTicket,
     EmbedTriggerResponse,
 )
-from src.core.auth import UserIdentity, get_authenticated_user_identity, require_admin, require_auth_session
+from src.core.auth import UserIdentity, get_authenticated_user_identity, is_admin_email, require_admin, require_auth_session
 from src.core.config import Settings
 from src.core.dependencies import get_db_session, get_settings
 from src.models import (
@@ -262,7 +262,12 @@ async def delete_company(
 ) -> None:
     """Permanently delete an owned agent and all associated data."""
     identity = get_authenticated_user_identity(session_state)
-    company = get_owned_company(db_session, company_id=company_id, owner_id=identity.user_id)
+    if is_admin_email(identity.email, settings.admin_emails):
+        company = db_session.get(Company, company_id)
+        if company is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
+    else:
+        company = get_owned_company(db_session, company_id=company_id, owner_id=identity.user_id)
     documents = list_documents(db_session, company_id=company.id)
 
     try:

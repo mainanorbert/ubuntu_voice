@@ -65,3 +65,61 @@ def test_admin_agent_directory_paginates_and_searches_name_or_email(tmp_path, mo
     finally:
         app.dependency_overrides.clear()
         clear_database_caches()
+
+
+def test_admin_can_delete_another_users_agent(tmp_path, monkeypatch) -> None:
+    """An ADMIN_EMAILS administrator can permanently delete any agent."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
+    monkeypatch.setenv("EIVEN_SERVICE_URL", f"sqlite:///{tmp_path / 'admin-delete.db'}")
+    monkeypatch.setenv("ADMIN_EMAILS", "admin@example.org")
+
+    from src.core.auth import UserIdentity, require_auth_session
+    from src.core.database import Base
+    from src.core.dependencies import clear_database_caches, get_database_engine, get_settings
+    from src.main import app
+    from src.models import Company, IncidentStatistic, User
+
+    clear_database_caches()
+
+    async def stub_require_auth_session() -> UserIdentity:
+        return UserIdentity(user_id="admin", email="admin@example.org")
+
+    app.dependency_overrides[require_auth_session] = stub_require_auth_session
+    try:
+        settings = get_settings()
+        engine = get_database_engine(settings.database_url)
+        Base.metadata.create_all(bind=engine)
+        with Session(engine) as session:
+            session.add_all(
+                [
+                    User(id="admin", email="admin@example.org"),
+                    User(id="owner", email="owner@example.org"),
+                    Company(
+                        id="other_users_agent",
+                        name="Other User Agent",
+                        email="agent@example.org",
+                        owner_id="owner",
+                    ),
+                    IncidentStatistic(
+                        id="stat_for_other_users_agent",
+                        company_id="other_users_agent",
+                        place="Goma",
+                        normalized_place="goma",
+                        location_key="place:goma",
+                        description="Displacement report",
+                        type="Displacements",
+                    ),
+                ]
+            )
+            session.commit()
+
+        with TestClient(app) as client:
+            response = client.delete("/api/v1/companies/other_users_agent")
+
+        assert response.status_code == 204, response.text
+        with Session(engine) as session:
+            assert session.get(Company, "other_users_agent") is None
+            assert session.get(IncidentStatistic, "stat_for_other_users_agent") is None
+    finally:
+        app.dependency_overrides.clear()
+        clear_database_caches()
